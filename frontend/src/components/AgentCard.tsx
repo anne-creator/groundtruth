@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import type { AgentId, Plan, Decision } from '../types';
 import { AGENT_LABELS } from '../types';
+import FormattedProse from './FormattedProse';
 
 interface Props {
   agentId: AgentId;
   plan: Plan | null;
   decisions: Decision[];
+  allPlans: Plan[];
 }
 
 const AGENT_COLOR: Record<AgentId, string> = {
@@ -14,7 +16,7 @@ const AGENT_COLOR: Record<AgentId, string> = {
   balanced_ceo: '#10b981',
 };
 
-export default function AgentCard({ agentId, plan, decisions }: Props) {
+export default function AgentCard({ agentId, plan, decisions, allPlans }: Props) {
   const [expanded, setExpanded] = useState(false);
   const isEliminated = plan?.eliminated_at_round != null;
   const color = AGENT_COLOR[agentId];
@@ -45,9 +47,16 @@ export default function AgentCard({ agentId, plan, decisions }: Props) {
       {/* Round 1 plan */}
       {plan ? (
         <div>
-          <p style={{ margin: 0, fontSize: 13, color: '#e2e8f0', fontStyle: isEliminated ? 'italic' : 'normal', textDecoration: isEliminated ? 'line-through' : 'none' }}>
-            {plan.content}
-          </p>
+          <FormattedProse
+            text={plan.content}
+            style={{
+              fontSize: 14,
+              color: '#f1f5f9',
+              lineHeight: 1.55,
+              fontStyle: isEliminated ? 'italic' : 'normal',
+              textDecoration: isEliminated ? 'line-through' : 'none',
+            }}
+          />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
             <span style={{ fontSize: 12, color: color, fontWeight: 600 }}>
               {Math.round((plan.confidence ?? 0) * 100)}% confidence
@@ -98,17 +107,45 @@ export default function AgentCard({ agentId, plan, decisions }: Props) {
 
       {/* Votes */}
       {decisions.map((d) => {
-        const chosenPlanAgentId = d.chosen_plan_id;
         const held = d.is_own_plan;
+        const chosenAgentId = allPlans.find((p) => p.id === d.chosen_plan_id)?.agent_id;
+        const chosenLabel = chosenAgentId ? AGENT_LABELS[chosenAgentId] : 'unknown plan';
+        const chosenColor = chosenAgentId ? AGENT_COLOR[chosenAgentId] : '#a78bfa';
         return (
-          <div key={d.id} style={{ borderTop: '1px solid #1e293b', paddingTop: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div key={d.id} style={{ borderTop: '1px solid #1e293b', paddingTop: 12, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>R{d.round}</span>
-              <span style={{ fontSize: 12, color: held ? color : '#a78bfa' }}>
-                {held ? '↩ holds own' : `→ ${AGENT_LABELS[chosenPlanAgentId as AgentId] ?? chosenPlanAgentId}`}
+              <span style={{ fontSize: 12, color: '#64748b' }}>voted</span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: chosenColor,
+                  background: chosenColor + '1f',
+                  border: `1px solid ${chosenColor}55`,
+                  borderRadius: 4,
+                  padding: '1px 6px',
+                }}
+              >
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: chosenColor, flexShrink: 0 }} />
+                {chosenLabel}
+                {held && <span style={{ fontSize: 10, color: chosenColor, opacity: 0.85 }}>(own)</span>}
               </span>
             </div>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8', lineHeight: 1.4 }}>{d.reasoning}</p>
+            <FormattedProse
+              text={d.reasoning}
+              style={{
+                marginTop: 6,
+                paddingLeft: 8,
+                borderLeft: `2px solid ${color}66`,
+                fontSize: 12.5,
+                color: '#cbd5e1',
+                lineHeight: 1.6,
+              }}
+            />
           </div>
         );
       })}

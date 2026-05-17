@@ -18,6 +18,8 @@ InsForge backend + Vercel frontend. 3 persona agents debate over a Neo4j knowled
 
 **Hosting note:** Neo4j cannot run on Vercel (stateless serverless). AuraDB is the answer; URI + password go in InsForge env vars.
 
+InsForge Edge Functions also accept **`SUPERMEMORY_API_KEY`** (set via `insforge secrets set SUPERMEMORY_API_KEY …`). Debate orchestration stays up when it is absent; profile/evidence-backed prompts and the dashboard Memory panel degrade gracefully.
+
 ---
 
 ## Postgres Schema
@@ -33,7 +35,9 @@ CREATE TABLE current_state (
   status          TEXT NOT NULL DEFAULT 'idle',   -- idle|round1|round2|round3|complete|approved|rejected
   alive_plan_ids  UUID[] NOT NULL DEFAULT '{}',   -- shrinks as plans die
   approvals       JSONB NOT NULL DEFAULT '{}',    -- {plan_id: count} for current round only
-  neo4j_context   JSONB,                          -- cached graph dump from /start-session
+  neo4j_context   JSONB,                          -- cached graph dump from /start-session (LLM reads Supermemory evidence instead)
+  session_token   UUID NOT NULL DEFAULT gen_random_uuid(),
+  caller_phone    TEXT,
   updated_at      TIMESTAMPTZ DEFAULT NOW(),
   CHECK (id = 1)
 );
@@ -189,7 +193,7 @@ Frontend orchestrates rounds — backend functions are stateless. No race condit
 **Body:** `{ plan_id, decision }`
 1. INSERT into `approvals`
 2. UPDATE `current_state.status = decision`
-3. If `approved`: read plan's `actions[]`, fan out to Slack/Calendar APIs (one fetch per action)
+3. If `approved`: read plan's `actions[]`, fan out to Slack/Calendar APIs (one fetch per action). Also append a to-do block to the configured Notion page (`NOTION_PAGE_ID`) containing the plan title, agent/confidence metadata, reasoning claims, and action list. Skipped silently if `NOTION_API_KEY`/`NOTION_PAGE_ID` are unset.
 4. INSERT event_log: `"Human approved Conservative's plan. Firing 4 actions."`
 
 ---
@@ -274,6 +278,8 @@ AGENTPHONE_AGENT_ID      # ID of the agent you created on AgentPhone
 AGENTPHONE_NUMBER_ID     # (optional) specific phone number ID for caller ID
 SLACK_BOT_TOKEN
 GOOGLE_SERVICE_ACCOUNT_JSON
+NOTION_API_KEY           # internal integration token; required to append approved plans to Notion
+NOTION_PAGE_ID           # target todo-list page ID (must be shared with the integration)
 ```
 (`ANTHROPIC_API_KEY` is implicit via `client.ai`.)
 Neo4j vars removed — no longer needed.

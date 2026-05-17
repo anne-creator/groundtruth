@@ -82,4 +82,6 @@ export interface SessionState {
   neo4j_context: unknown;
   caller_phone: string | null;
   updated_at: string;
+  /** Rotated each `/start-session` for Supermemory container tags */
+  session_token?: string | null;
 }

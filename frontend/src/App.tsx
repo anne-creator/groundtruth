@@ -5,6 +5,7 @@ import { AGENTS } from './types';
 import NarratorPanel from './components/NarratorPanel';
 import AgentCard from './components/AgentCard';
 import ResultPanel from './components/ResultPanel';
+import MemoryPanel from './components/MemoryPanel';
 
 type RtStatus = 'connecting' | 'connected' | 'error';
 
@@ -15,6 +16,7 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [callState, setCallState] = useState<'idle' | 'calling' | 'called'>('idle');
+  const [smsState, setSmsState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [error, setError] = useState<string | null>(null);
 
   // Tracks whether this browser tab initiated the current session.
@@ -145,6 +147,7 @@ export default function App() {
     setEvents([]);
     setError(null);
     setCallState('idle');
+    setSmsState('idle');
 
     try {
       await Promise.all(AGENTS.map((id) => callFn('agent-plan', { agent_id: id })));
@@ -200,8 +203,10 @@ export default function App() {
     }
   }, [sessionState?.status, running, runDebate]);
 
-  // Auto-call: when the debate finishes and a caller_phone is on record, place the
-  // outbound AgentPhone call to deliver the recommendation.
+  // Auto-call + auto-text: when the debate finishes and a caller_phone is on
+  // record, place the outbound AgentPhone call AND send an SMS in parallel.
+  // The SMS contains the recommendation and instructs the user to reply
+  // APPROVE/REJECT — handled by the inbound branch of /agentphone-webhook.
   useEffect(() => {
     if (
       sessionState?.status === 'complete' &&
@@ -219,6 +224,23 @@ export default function App() {
     }
   }, [sessionState?.status, sessionState?.caller_phone, running, callState]);
 
+  useEffect(() => {
+    if (
+      sessionState?.status === 'complete' &&
+      sessionState.caller_phone &&
+      !running &&
+      smsState === 'idle'
+    ) {
+      setSmsState('sending');
+      callFn('text-user', {})
+        .then(() => setSmsState('sent'))
+        .catch((err) => {
+          console.error('[text-user]', err);
+          setSmsState('idle');
+        });
+    }
+  }, [sessionState?.status, sessionState?.caller_phone, running, smsState]);
+
   async function handleReset() {
     if (running) return;
     setError(null);
@@ -229,6 +251,7 @@ export default function App() {
       setEvents([]);
       setSessionState(null);
       setCallState('idle');
+      setSmsState('idle');
       await refreshFromDb();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Reset failed');
@@ -297,6 +320,16 @@ export default function App() {
                 ✓ call placed
               </span>
             )}
+            {smsState === 'sending' && (
+              <span style={{ fontSize: 12, color: '#a78bfa', background: '#1e1b4b', padding: '2px 10px', borderRadius: 20, border: '1px solid #4c1d95' }}>
+                💬 texting {sessionState?.caller_phone}…
+              </span>
+            )}
+            {smsState === 'sent' && (
+              <span style={{ fontSize: 12, color: '#34d399', background: '#052e16', padding: '2px 10px', borderRadius: 20, border: '1px solid #065f46' }}>
+                ✓ text sent
+              </span>
+            )}
             <button
               onClick={handleReset}
               disabled={running}
@@ -330,18 +363,22 @@ export default function App() {
                 agentId={id as AgentId}
                 plan={plans.find((p) => p.agent_id === id) ?? null}
                 decisions={decisions.filter((d) => d.agent_id === id)}
+                allPlans={plans}
               />
             ))}
           </div>
         </main>
 
-        <ResultPanel
-          state={sessionState}
-          plans={plans}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          loading={actionLoading}
-        />
+        <div style={{ display: 'flex', flexDirection: 'row', flexShrink: 0, alignSelf: 'stretch', minHeight: 0 }}>
+          <ResultPanel
+            state={sessionState}
+            plans={plans}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            loading={actionLoading}
+          />
+          <MemoryPanel session={sessionState} />
+        </div>
       </div>
 
       <div style={{ borderTop: '1px solid #334155', padding: '12px 20px', display: 'flex', gap: 12, background: '#0f172a' }}>

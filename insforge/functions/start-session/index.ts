@@ -1,5 +1,109 @@
 import { createClient } from 'npm:@insforge/sdk';
 
+import Supermemory from 'npm:supermemory';
+
+export const GT_AGENT_IDS = ['aggressive_ceo', 'conservative_ceo', 'balanced_ceo'] as const;
+
+/** Full container tag charset (Supermemory constraint). */
+const TAG_RE = /^[A-Za-z0-9._-]{1,100}$/;
+
+export type SupermemoryClient = InstanceType<typeof Supermemory>;
+
+export const EMPTY_PROFILE = {
+  profile: { static: [] as string[], dynamic: [] as string[] },
+  searchResults: undefined as { results: unknown[]; total: number; timing: number } | undefined,
+};
+
+export type EmptyProfile = typeof EMPTY_PROFILE;
+
+export const EMPTY_SEARCH = { results: [] as unknown[], total: 0, timing: 0 };
+
+/** documents.list responses use `memories` + `pagination`. */
+export const EMPTY_LIST = {
+  memories: [] as { id: string }[],
+  pagination: { currentPage: 1, totalItems: 0, totalPages: 0 },
+};
+
+export function validateTag(tag: string, hint: string): void {
+  if (!TAG_RE.test(tag)) {
+    throw new Error(`Supermemory invalid container tag (${hint}): ${tag}`);
+  }
+}
+
+/** Session-scoped and global Supermemory tags. */
+export function tags(sessionToken: string) {
+  if (!sessionToken?.trim()) throw new Error('[supermemory] missing session_token');
+  const base = `gt.s.${sessionToken}`;
+  validateTag(base, 'base');
+  return {
+    queries: 'gt.queries',
+    evidence: `${base}.evidence`,
+    plans: `${base}.plans`,
+    decisions: `${base}.decisions`,
+    approvals: `${base}.approvals`,
+    agent: (agentId: string) => {
+      const t = `${base}.agent.${agentId}`;
+      validateTag(t, `agent.${agentId}`);
+      return t;
+    },
+  };
+}
+
+function _sanityCheckTags(): void {
+  try {
+    const t = tags('aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee');
+    validateTag(t.queries, 'queries');
+    const al = [...GT_AGENT_IDS.map((id) => t.agent(id)), t.evidence, t.plans, t.decisions, t.approvals];
+    al.forEach((x, i) => validateTag(x, `slot${i}`));
+  } catch (e) {
+    console.error('[supermemory:sanity]', e);
+    throw e;
+  }
+}
+_sanityCheckTags();
+
+export function priorSessionBulkTags(priorToken: string | null | undefined): string[] {
+  if (!priorToken) return [];
+  try {
+    const t = tags(priorToken);
+    return [...GT_AGENT_IDS.map((id) => t.agent(id)), t.evidence, t.plans, t.decisions, t.approvals];
+  } catch {
+    return [];
+  }
+}
+
+export async function safeCall<T>(label: string, fallback: T, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    console.warn(`[sm:${label}]`, err);
+    return fallback;
+  }
+}
+
+export function getClient(): SupermemoryClient | null {
+  const key = Deno.env.get('SUPERMEMORY_API_KEY');
+  if (!key) return null;
+  return new Supermemory({ apiKey: key });
+}
+
+let settingsBootstrapped = false;
+
+export async function bootstrapSettings(sm: SupermemoryClient): Promise<void> {
+  if (settingsBootstrapped) return;
+  settingsBootstrapped = true;
+  await safeCall('settings.update', undefined, async () => {
+    await sm.settings.get();
+    try {
+      await sm.settings.update({});
+    } catch (e1) {
+      console.warn('[sm:settings.update:empty]', e1);
+    }
+    console.log('[sm:settings.update] ok');
+    return undefined;
+  });
+}
+
 const FIXTURE = {
   nodes: [
     { label: 'Company',          props: { id: 'acme',          name: 'Acme', stage: 'YC W26' } },
@@ -86,12 +190,22 @@ export default async function handler(req: Request): Promise<Response> {
     if (r.error) console.error(`[start-session:${label}]`, r.error);
   };
 
+  const priorTokRes = await db.database.from('current_state').select('session_token').eq('id', 1).maybeSingle();
+  logErr('select prior session_token', priorTokRes);
+  const priorToken = priorTokRes.data?.session_token as string | undefined;
+
   logErr('delete approvals', await db.database.from('approvals').delete().neq('id', NULL_UUID));
   logErr('delete decisions', await db.database.from('decisions').delete().neq('id', NULL_UUID));
   logErr('delete event_log', await db.database.from('event_log').delete().neq('id', NULL_UUID));
   logErr('delete plans', await db.database.from('plans').delete().neq('id', NULL_UUID));
 
+  const agentsSeedRes = await db.database.from('agents').select('id,persona,style');
+  logErr('select agents (seed)', agentsSeedRes);
+  const agentsForSeed = agentsSeedRes.data ?? [];
+
   const context = buildContext();
+
+  const newSessionToken = crypto.randomUUID();
 
   const stateUpdate: Record<string, unknown> = {
     query,
@@ -100,6 +214,7 @@ export default async function handler(req: Request): Promise<Response> {
     neo4j_context: context,
     alive_plan_ids: [],
     approvals: {},
+    session_token: newSessionToken,
     updated_at: new Date().toISOString(),
   };
   if (callerPhone !== undefined) stateUpdate.caller_phone = callerPhone;
@@ -114,6 +229,50 @@ export default async function handler(req: Request): Promise<Response> {
       ? `Session triggered via SMS from ${callerPhone}. Context loaded. Dispatching board.`
       : 'New query received. Context loaded. Dispatching board.',
   }]));
+
+  const sm = getClient();
+  if (sm) {
+    const tg = tags(newSessionToken);
+    await bootstrapSettings(sm);
+
+    const priorTags = priorSessionBulkTags(priorToken ?? null);
+    await safeCall('deleteBulk prior', undefined, async () => {
+      if (!priorTags.length) {
+        console.log('[sm:deleteBulk prior] no prior session');
+        return undefined;
+      }
+      const resp = await sm.documents.deleteBulk({ containerTags: priorTags });
+      console.log('[sm:deleteBulk prior]', `deleted ${resp?.deletedCount ?? '?'}`);
+      return undefined;
+    });
+
+    const queryId = crypto.randomUUID();
+    await safeCall('queries.add', undefined, async () => {
+      await sm.add({
+        containerTag: tg.queries,
+        content: query,
+        customId: queryId,
+        metadata: { session_token: newSessionToken },
+      });
+      console.log('[sm:add query]', `customId=${queryId}`);
+      return undefined;
+    });
+
+    await Promise.all(agentsForSeed.map((row) =>
+      safeCall(`memories.seed.${row.id}`, undefined, async () => {
+        await sm.memories.updateMemory({
+          containerTag: tg.agent(row.id),
+          newContent: `${row.persona}\n\n${row.style}`,
+        });
+        console.log('[sm:memories.seed]', row.id);
+        return undefined;
+      })
+    ));
+
+    console.log('[sm:start-session]', `session_token=${newSessionToken}`);
+  } else {
+    console.warn('[sm:start-session] SUPERMEMORY_API_KEY missing — skipping Supermemory ingestion');
+  }
 
   return new Response(JSON.stringify({ ok: true }), {
     status: 200, headers: { ...CORS, 'Content-Type': 'application/json' },

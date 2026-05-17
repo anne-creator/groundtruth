@@ -21,6 +21,25 @@ const PERSONA_NAMES: Record<string, string> = {
 
 const NULL_UUID = '00000000-0000-0000-0000-000000000000';
 
+function parseDecision(text: string): 'approved' | 'rejected' | null {
+  const t = text.toLowerCase();
+  const approved =
+    t.includes('approve') ||
+    t.includes('yes') ||
+    t.includes('confirmed') ||
+    t.includes('do it') ||
+    t.includes('proceed');
+  const rejected =
+    t.includes('reject') ||
+    t.includes('no') ||
+    t.includes('decline') ||
+    t.includes('cancel') ||
+    t.includes('stop');
+  if (approved) return 'approved';
+  if (rejected) return 'rejected';
+  return null;
+}
+
 const FIXTURE = {
   nodes: [
     { label: 'Company',          props: { id: 'acme',          name: 'Acme', stage: 'YC W26' } },
@@ -111,7 +130,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (r.error) console.error(`[agentphone-webhook:${label}]`, r.error);
   };
 
-  // ── SMS: start a fresh debate session (inlined from start-session) ──────
+  // ── SMS: either an approval reply to a complete session, or a new session ──
   if (payload.channel === 'sms') {
     if (payload.data.direction === 'outbound') {
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
@@ -122,6 +141,49 @@ export default async function handler(req: Request): Promise<Response> {
 
     if (!message) {
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    }
+
+    // Reply-approval branch: if we're awaiting approval and the sender matches,
+    // try to parse the message as a decision before starting a new session.
+    const currentRes = await db.database
+      .from('current_state')
+      .select('status,caller_phone,alive_plan_ids')
+      .eq('id', 1)
+      .single();
+
+    if (
+      currentRes.data?.status === 'complete' &&
+      currentRes.data.caller_phone === from
+    ) {
+      const decision = parseDecision(message);
+      if (decision) {
+        const planId: string | undefined = (currentRes.data.alive_plan_ids ?? [])[0];
+        if (planId) {
+          const planRes = await db.database.from('plans').select('agent_id').eq('id', planId).single();
+          const agentId = planRes.data?.agent_id ?? '';
+          const persona = PERSONA_NAMES[agentId] ?? 'Your advisor';
+
+          logErr('insert approvals', await db.database.from('approvals').insert([{
+            plan_id: planId,
+            decision,
+          }]));
+
+          logErr('update current_state', await db.database.from('current_state').update({
+            status: decision,
+            updated_at: new Date().toISOString(),
+          }).eq('id', 1));
+
+          logErr('insert event_log', await db.database.from('event_log').insert([{
+            round: 0,
+            source: 'system',
+            kind: 'system',
+            narration: `SMS ${decision} for ${persona}'s plan.`,
+          }]));
+
+          return new Response(JSON.stringify({ ok: true, decision }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
+        }
+      }
+      // Unrecognized text while awaiting approval → fall through to new session.
     }
 
     console.log('[agentphone-webhook] starting session from SMS', { from, message });
@@ -158,23 +220,10 @@ export default async function handler(req: Request): Promise<Response> {
 
   // ── Voice: handle approval/rejection from the outbound call ──────────────
   if (payload.channel === 'voice') {
-    const transcript = (payload.data.transcript ?? '').toLowerCase();
+    const transcript = payload.data.transcript ?? '';
+    const decision = parseDecision(transcript);
 
-    const approved =
-      transcript.includes('approve') ||
-      transcript.includes('yes') ||
-      transcript.includes('confirmed') ||
-      transcript.includes('do it') ||
-      transcript.includes('proceed');
-
-    const rejected =
-      transcript.includes('reject') ||
-      transcript.includes('no') ||
-      transcript.includes('decline') ||
-      transcript.includes('cancel') ||
-      transcript.includes('stop');
-
-    if (!approved && !rejected) {
+    if (!decision) {
       return Response.json({
         text: "I didn't catch that. Please say 'approve' to execute the recommendation, or 'reject' to decline.",
       });
@@ -190,7 +239,7 @@ export default async function handler(req: Request): Promise<Response> {
     const planRes = await db.database.from('plans').select('agent_id,content').eq('id', planId).single();
     const agentId = planRes.data?.agent_id ?? '';
     const persona = PERSONA_NAMES[agentId] ?? 'Your advisor';
-    const decision = approved ? 'approved' : 'rejected';
+    const approved = decision === 'approved';
 
     // Record the approval directly (inlined from execute-action's DB writes).
     // Side-effect fan-out (Slack/Calendar) is skipped here — that still belongs
