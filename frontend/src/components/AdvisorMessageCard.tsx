@@ -4,9 +4,9 @@ import FormattedProse from './FormattedProse';
 import EvidenceChips from './EvidenceChips';
 
 export const AGENT_COLOR: Record<AgentId, string> = {
-  aggressive_ceo: '#C8756B', // Elon
-  conservative_ceo: '#6A84B8', // Warren
-  balanced_ceo: '#6F997D', // Ray
+  aggressive_ceo: '#E26A73', // Elon
+  conservative_ceo: '#5B82F0', // Warren
+  balanced_ceo: '#39A86F', // Ray
 };
 
 type AdvisorTurn =
@@ -71,7 +71,7 @@ export default function AdvisorMessageCard({ turn, eliminatedAtRound, replyHint 
   return (
     <article
       style={{
-        background: 'var(--gt-card)',
+        background: 'var(--gt-glass-card)',
         border: '1px solid var(--gt-border)',
         borderRadius: 14,
         padding: 18,

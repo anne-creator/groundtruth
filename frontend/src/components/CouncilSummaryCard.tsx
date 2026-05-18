@@ -61,7 +61,7 @@ export default function CouncilSummaryCard({ state, plans }: Props) {
   return (
     <section
       style={{
-        background: 'rgba(255, 255, 255, 0.34)',
+        background: 'var(--gt-glass-card)',
         border: '1px solid var(--gt-border)',
         borderRadius: 12,
         padding: '12px 14px',

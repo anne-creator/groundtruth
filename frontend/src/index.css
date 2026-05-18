@@ -10,21 +10,30 @@
   --gt-card: rgba(255, 255, 255, 0.56);
   --gt-card-strong: rgba(255, 255, 255, 0.74);
   --gt-muted-surface: rgba(255, 255, 255, 0.28);
+  --gt-glass-panel:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.44) 38%, rgba(255, 255, 255, 0.24)),
+    rgba(255, 255, 255, 0.42);
+  --gt-glass-card:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.5) 42%, rgba(255, 255, 255, 0.3)),
+    rgba(255, 255, 255, 0.46);
   --gt-border: rgba(255, 255, 255, 0.62);
   --gt-border-strong: rgba(255, 255, 255, 0.82);
   --gt-border-subtle: rgba(148, 163, 184, 0.24);
   --gt-text-primary: #111827;
   --gt-text-secondary: #475569;
   --gt-text-muted: #64748B;
-  --gt-approve: #4F8F72;
-  --gt-reject: #B85E57;
-  --gt-warning: #AF8550;
-  --gt-info: #5B7DB7;
-  --gt-live: #5C9578;
+  --gt-approve: #2FA36B;
+  --gt-reject: #D85A64;
+  --gt-warning: #C88A32;
+  --gt-info: #4E7BEF;
+  --gt-live: #35A874;
   --gt-neutral-accent: #8D8D98;
   --gt-glass-shadow: 0 18px 42px rgba(15, 23, 42, 0.08), 0 2px 10px rgba(15, 23, 42, 0.05);
   --gt-soft-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), 0 1px 4px rgba(15, 23, 42, 0.04);
-  --gt-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --gt-inset-highlight:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 1px 0 0 rgba(255, 255, 255, 0.46),
+    inset 0 -1px 0 rgba(148, 163, 184, 0.16);
 }
 
 html, body {

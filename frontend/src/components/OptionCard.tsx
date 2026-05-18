@@ -53,7 +53,7 @@ export default function OptionCard({ plan, label, canAct, loading, onApprove, on
   return (
     <article
       style={{
-        background: 'var(--gt-card)',
+        background: 'var(--gt-glass-card)',
         border: `1px solid ${color}55`,
         borderRadius: 12,
         padding: 14,

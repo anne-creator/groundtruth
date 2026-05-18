@@ -18,7 +18,7 @@ export default function RoundResultCard({ round, entries }: Props) {
   return (
     <div
       style={{
-        background: 'rgba(255, 255, 255, 0.34)',
+        background: 'var(--gt-glass-card)',
         border: '1px dashed var(--gt-border)',
         borderRadius: 12,
         padding: '12px 16px',

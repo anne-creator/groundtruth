@@ -32,8 +32,15 @@ interface MemoryPayload {
   processing?: { documents?: ProcessingDoc[] };
 }
 
-export default function MemoryPanel({ session }: { session: SessionState | null }) {
-  const [open, setOpen] = useState(false);
+export default function MemoryPanel({
+  session,
+  open,
+  onOpenChange,
+}: {
+  session: SessionState | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [tab, setTab] = useState<'profile' | 'evidence'>('profile');
   const [loading, setLoading] = useState(false);
   const [payload, setPayload] = useState<MemoryPayload | null>(null);
@@ -84,19 +91,16 @@ export default function MemoryPanel({ session }: { session: SessionState | null 
       width: open ? 300 : 40,
       flexShrink: 0,
       borderLeft: '1px solid var(--gt-border-subtle)',
-      background: 'var(--gt-panel)',
+      background: 'transparent',
       display: 'flex',
       flexDirection: 'column',
       minHeight: 0,
       transition: 'width 160ms ease',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-      boxShadow: 'var(--gt-inset-highlight)',
     }}
     >
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => onOpenChange(!open)}
         title={open ? 'Collapse Memory' : 'Open Memory'}
         style={{
           height: 40,

@@ -10,6 +10,7 @@ import {
 interface Props {
   state: SessionState | null;
   plans: Plan[];
+  width: number;
 }
 
 // Scenario-level constants. Schema doesn't carry these yet — see Stage 6 of the plan.
@@ -129,7 +130,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export default function DecisionContextPanel({ state, plans }: Props) {
+export default function DecisionContextPanel({ state, plans, width }: Props) {
   const facts = extractKeyFacts(state?.neo4j_context ?? null);
 
   // Prefer the live computed_runway from the first plan once available;
@@ -149,10 +150,11 @@ export default function DecisionContextPanel({ state, plans }: Props) {
   return (
     <aside
       style={{
-        width: 300,
+        width,
         flexShrink: 0,
-        borderRight: '1px solid var(--gt-border-subtle)',
-        background: 'var(--gt-panel)',
+        border: '1px solid var(--gt-border)',
+        background: 'var(--gt-glass-panel)',
+        borderRadius: 16,
         padding: '16px 16px 20px',
         overflowY: 'auto',
         display: 'flex',
@@ -160,7 +162,7 @@ export default function DecisionContextPanel({ state, plans }: Props) {
         gap: 18,
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: 'var(--gt-inset-highlight)',
+        boxShadow: 'var(--gt-glass-shadow), var(--gt-inset-highlight)',
       }}
     >
       <h2

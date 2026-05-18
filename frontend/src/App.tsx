@@ -7,10 +7,17 @@ import TopBar, { type ViewTab } from './components/TopBar';
 import DecisionContextPanel from './components/DecisionContextPanel';
 import CouncilChat from './components/CouncilChat';
 import DecisionPanel from './components/DecisionPanel';
+import EvidenceWorkspace from './components/EvidenceWorkspace';
 
 type RtStatus = 'connecting' | 'connected' | 'error';
+type ResizeTarget = 'left' | 'right' | null;
 
 const CHANNEL = 'groundtruth:session';
+const LEFT_MIN = 240;
+const LEFT_MAX = 420;
+const RIGHT_MIN = 320;
+const RIGHT_MAX = 520;
+const CENTER_MIN = 320;
 
 export default function App() {
   const [query, setQuery] = useState('');
@@ -30,8 +37,65 @@ export default function App() {
   const [events, setEvents] = useState<EventLogEntry[]>([]);
   const [rtStatus, setRtStatus] = useState<RtStatus>('connecting');
   const [activeTab, setActiveTab] = useState<ViewTab>('chat');
+  const [leftWidth, setLeftWidth] = useState(300);
+  const [rightWidth, setRightWidth] = useState(380);
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [resizeTarget, setResizeTarget] = useState<ResizeTarget>(null);
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleResize() {
+      setViewportWidth(window.innerWidth);
+    }
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!resizeTarget) return;
+
+    function handlePointerMove(event: PointerEvent) {
+      if (resizeTarget === 'left') {
+        setLeftWidth(Math.min(LEFT_MAX, Math.max(LEFT_MIN, event.clientX - 14)));
+      } else {
+        const memoryWidth = memoryOpen ? 300 : 40;
+        setRightWidth(
+          Math.min(RIGHT_MAX, Math.max(RIGHT_MIN, window.innerWidth - event.clientX - 14 - memoryWidth)),
+        );
+      }
+    }
+
+    function handlePointerUp() {
+      setResizeTarget(null);
+    }
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [memoryOpen, resizeTarget]);
+
+  const memoryWidth = memoryOpen ? 300 : 40;
+  const fixedChromeWidth = 28 + 40 + 24 + memoryWidth;
+  const sidebarBudget = Math.max(
+    LEFT_MIN + RIGHT_MIN,
+    viewportWidth - fixedChromeWidth - CENTER_MIN,
+  );
+  const effectiveLeftWidth = Math.min(leftWidth, Math.max(LEFT_MIN, sidebarBudget - RIGHT_MIN));
+  const effectiveRightWidth = Math.min(
+    rightWidth,
+    Math.max(RIGHT_MIN, sidebarBudget - effectiveLeftWidth),
+  );
 
   // ── DB refresh (source-of-truth backstop) ────────────────────────────────
   // Realtime is best-effort. After each orchestrator phase we re-fetch from
@@ -348,11 +412,12 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', gap: 10, overflow: 'hidden', minHeight: 0, padding: '0 14px 14px' }}>
         {/* Left column — Decision Context */}
-        <DecisionContextPanel state={sessionState} plans={plans} />
+        <DecisionContextPanel state={sessionState} plans={plans} width={effectiveLeftWidth} />
+        <ResizeHandle side="left" active={resizeTarget === 'left'} onPointerDown={() => setResizeTarget('left')} />
 
-        {/* Center column — Council Chat + sticky composer */}
+        {/* Center column — active workspace */}
         <main
           style={{
             flex: 1,
@@ -363,7 +428,7 @@ export default function App() {
           }}
         >
           <div
-            ref={chatScrollRef}
+            ref={activeTab === 'chat' ? chatScrollRef : undefined}
             style={{
               flex: 1,
               overflowY: 'auto',
@@ -379,106 +444,173 @@ export default function App() {
               </h2>
             )}
 
-            <CouncilChat plans={plans} decisions={decisions} events={events} />
+            {activeTab === 'chat' ? (
+              <CouncilChat plans={plans} decisions={decisions} events={events} />
+            ) : (
+              <EvidenceWorkspace plans={plans} />
+            )}
           </div>
 
-          {/* Sticky composer */}
-          <div
-            style={{
-              borderTop: '1px solid var(--gt-border-subtle)',
-              padding: '12px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              background: 'var(--gt-panel)',
-              flexShrink: 0,
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              boxShadow: 'var(--gt-inset-highlight)',
-            }}
-          >
-            <div style={{ display: 'flex', gap: 4 }}>
-              <ComposerIconButton title="Attach file (coming soon)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-                </svg>
-              </ComposerIconButton>
-              <ComposerIconButton title="Mention council (coming soon)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-4 8" />
-                </svg>
-              </ComposerIconButton>
-              <ComposerIconButton title="Add data (coming soon)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <ellipse cx="12" cy="5" rx="8" ry="3" />
-                  <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
-                  <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
-                </svg>
-              </ComposerIconButton>
-            </div>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && query.trim() && !running) ask(query.trim()); }}
-              placeholder="Ask a follow-up question or adjust the scenario…"
-              disabled={running}
+          {activeTab === 'chat' && (
+            <div
               style={{
-                flex: 1,
-                background: 'var(--gt-card-strong)',
                 border: '1px solid var(--gt-border)',
-                borderRadius: 10,
-                padding: '10px 14px',
-                color: 'var(--gt-text-primary)',
-                fontSize: 14,
-                outline: 'none',
-                boxShadow: 'var(--gt-inset-highlight)',
-              }}
-            />
-            <button
-              onClick={() => query.trim() && !running && ask(query.trim())}
-              disabled={running || !query.trim()}
-              title={running ? 'Running…' : 'Send'}
-              aria-label="Send"
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                border: 'none',
-                background: running || !query.trim() ? 'rgba(141, 141, 152, 0.56)' : 'var(--gt-neutral-accent)',
-                color: '#FFFFFF',
-                display: 'inline-flex',
+                borderRadius: 16,
+                padding: '12px 20px',
+                display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                cursor: running || !query.trim() ? 'not-allowed' : 'pointer',
+                gap: 10,
+                background: 'var(--gt-glass-panel)',
                 flexShrink: 0,
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                boxShadow: 'var(--gt-soft-shadow), var(--gt-inset-highlight)',
               }}
             >
-              {running ? (
-                <span style={{ fontSize: 16, lineHeight: 1 }}>…</span>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              )}
-            </button>
-          </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <ComposerIconButton title="Attach file (coming soon)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                  </svg>
+                </ComposerIconButton>
+                <ComposerIconButton title="Mention council (coming soon)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-4 8" />
+                  </svg>
+                </ComposerIconButton>
+                <ComposerIconButton title="Add data (coming soon)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <ellipse cx="12" cy="5" rx="8" ry="3" />
+                    <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+                    <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
+                  </svg>
+                </ComposerIconButton>
+              </div>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && query.trim() && !running) ask(query.trim()); }}
+                placeholder="Ask a follow-up question or adjust the scenario…"
+                disabled={running}
+                style={{
+                  flex: 1,
+                  background: 'var(--gt-card-strong)',
+                  border: '1px solid var(--gt-border)',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                  color: 'var(--gt-text-primary)',
+                  fontSize: 14,
+                  outline: 'none',
+                  boxShadow: 'var(--gt-inset-highlight)',
+                }}
+              />
+              <button
+                onClick={() => query.trim() && !running && ask(query.trim())}
+                disabled={running || !query.trim()}
+                title={running ? 'Running…' : 'Send'}
+                aria-label="Send"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: running || !query.trim() ? 'rgba(141, 141, 152, 0.56)' : 'var(--gt-neutral-accent)',
+                  color: '#FFFFFF',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: running || !query.trim() ? 'not-allowed' : 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                {running ? (
+                  <span style={{ fontSize: 16, lineHeight: 1 }}>…</span>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          )}
         </main>
 
+        <ResizeHandle side="right" active={resizeTarget === 'right'} onPointerDown={() => setResizeTarget('right')} />
+
         {/* Right column — Decision Panel (placeholder: ResultPanel until Stage 5) + Memory drawer */}
-        <div style={{ display: 'flex', flexDirection: 'row', flexShrink: 0, alignSelf: 'stretch', minHeight: 0 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            flexShrink: 0,
+            alignSelf: 'stretch',
+            minHeight: 0,
+            border: '1px solid var(--gt-border)',
+            borderRadius: 16,
+            background: 'var(--gt-glass-panel)',
+            overflow: 'hidden',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: 'var(--gt-glass-shadow), var(--gt-inset-highlight)',
+          }}
+        >
           <DecisionPanel
             state={sessionState}
             plans={plans}
             onApprove={handleApprove}
             onReject={handleReject}
             loading={actionLoading}
+            width={effectiveRightWidth}
           />
-          <MemoryPanel session={sessionState} />
+          <MemoryPanel session={sessionState} open={memoryOpen} onOpenChange={setMemoryOpen} />
         </div>
       </div>
     </div>
+  );
+}
+
+function ResizeHandle({
+  side,
+  active,
+  onPointerDown,
+}: {
+  side: 'left' | 'right';
+  active: boolean;
+  onPointerDown: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`Resize ${side} sidebar`}
+      onPointerDown={onPointerDown}
+      style={{
+        width: 12,
+        flexShrink: 0,
+        border: 'none',
+        background: 'transparent',
+        cursor: 'col-resize',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0,
+        outline: 'none',
+      }}
+    >
+      <span
+        style={{
+          width: 4,
+          height: 56,
+          borderRadius: 999,
+          background: active ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.5)',
+          boxShadow: active
+            ? '0 0 0 1px rgba(148, 163, 184, 0.18), 0 10px 18px rgba(15, 23, 42, 0.12)'
+            : '0 0 0 1px rgba(148, 163, 184, 0.12)',
+          transition: 'background 120ms ease, box-shadow 120ms ease',
+        }}
+      />
+    </button>
   );
 }
 

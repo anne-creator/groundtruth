@@ -10,11 +10,12 @@ interface Props {
   onApprove: (planId: string) => void;
   onReject: (planId: string) => void;
   loading: boolean;
+  width: number;
 }
 
 const LABELS: Array<'A' | 'B' | 'C'> = ['A', 'B', 'C'];
 
-export default function DecisionPanel({ state, plans, onApprove, onReject, loading }: Props) {
+export default function DecisionPanel({ state, plans, onApprove, onReject, loading, width }: Props) {
   const status = state?.status ?? 'idle';
   const alive = state?.alive_plan_ids ?? [];
   const isTerminal = status === 'approved' || status === 'rejected';
@@ -39,18 +40,14 @@ export default function DecisionPanel({ state, plans, onApprove, onReject, loadi
   return (
     <aside
       style={{
-        width: 380,
+        width,
         flexShrink: 0,
-        borderLeft: '1px solid var(--gt-border-subtle)',
-        background: 'var(--gt-panel)',
+        background: 'transparent',
         padding: '14px 16px 20px',
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
         gap: 16,
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: 'var(--gt-inset-highlight)',
       }}
     >
       <CouncilSummaryCard state={state} plans={plans} />

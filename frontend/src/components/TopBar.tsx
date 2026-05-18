@@ -16,7 +16,7 @@ const TABS: { id: ViewTab; label: string; enabled: boolean }[] = [
   { id: 'chat', label: 'Chat', enabled: true },
   { id: 'compare', label: 'Compare', enabled: false },
   { id: 'timeline', label: 'Timeline', enabled: false },
-  { id: 'evidence', label: 'Evidence', enabled: false },
+  { id: 'evidence', label: 'Evidence', enabled: true },
   { id: 'actions', label: 'Actions', enabled: false },
 ];
 
@@ -49,13 +49,15 @@ export default function TopBar({ state, rtStatus, running, activeTab, onTabChang
         alignItems: 'center',
         gap: 16,
         padding: '10px 20px',
-        borderBottom: '1px solid var(--gt-border-subtle)',
-        background: 'var(--gt-panel)',
+        margin: '14px 14px 10px',
+        border: '1px solid var(--gt-border)',
+        borderRadius: 16,
+        background: 'var(--gt-glass-panel)',
         flexShrink: 0,
         minHeight: 56,
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: 'var(--gt-inset-highlight)',
+        boxShadow: 'var(--gt-glass-shadow), var(--gt-inset-highlight)',
       }}
     >
       {/* Left: logo + name + live pill */}
