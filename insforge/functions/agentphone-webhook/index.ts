@@ -286,6 +286,92 @@ function buildContext() {
   return { records: [{ cash, burn, round, investors, milestones, threats }] };
 }
 
+// Shared decision-execution path for both voice webhook events:
+//   - `agent.message` (webhook voiceMode, per-utterance)
+//   - `agent.call_ended` (hosted voiceMode, fires once on hangup)
+// Mirrors execute-action so the dashboard sees the same state transition.
+// Returns null when there's no active plan to act on (caller should respond
+// accordingly, e.g. "no active recommendation").
+async function executeVoiceDecision(
+  db: ReturnType<typeof createClient>,
+  logErr: (label: string, r: { error: unknown }) => void,
+  decision: 'approved' | 'rejected',
+): Promise<{ persona: string; actionCount: number } | null> {
+  const stateRes = await db.database
+    .from('current_state')
+    .select('alive_plan_ids,session_token')
+    .eq('id', 1)
+    .single();
+  const planId: string | undefined = (stateRes.data?.alive_plan_ids ?? [])[0];
+  if (!planId) return null;
+
+  const planRes = await db.database
+    .from('plans')
+    .select('agent_id,content,logic_plan,actions,confidence')
+    .eq('id', planId)
+    .single();
+  const planRow = planRes.data as PlanRow | null;
+  const agentId = planRow?.agent_id ?? '';
+  const persona = PERSONA_NAME[agentId] ?? 'Your advisor';
+  const approved = decision === 'approved';
+
+  const apprRes = await db.database
+    .from('approvals')
+    .insert([{ plan_id: planId, decision }])
+    .select('id')
+    .single();
+  logErr('insert approvals', apprRes);
+  const approvalId = apprRes.data?.id as string | undefined;
+
+  logErr('update current_state', await db.database.from('current_state').update({
+    status: decision,
+    updated_at: new Date().toISOString(),
+  }).eq('id', 1));
+
+  const token = stateRes.data?.session_token as string | undefined;
+  const sm = getClient();
+  const tg = token && sm ? tags(token) : null;
+  if (sm && tg && approvalId) {
+    await safeCall(`documents.approval.${approvalId}`, undefined, async () => {
+      await sm.documents.add({
+        containerTag: tg.approvals,
+        content: JSON.stringify({ plan_id: planId, decision }),
+        customId: approvalId,
+        metadata: {
+          decision,
+          plan_id: planId,
+        },
+      });
+      return undefined;
+    });
+  }
+
+  let actionCount = 0;
+  if (approved && planRow) {
+    const actions = planRow.actions ?? [];
+    actionCount = actions.length;
+    await Promise.all([
+      ...actions.map((a) => {
+        if (a.type === 'slack_message') return fireSlack(a);
+        if (a.type === 'calendar_create') return fireCalendar(a);
+        return Promise.resolve();
+      }),
+      appendApprovedToNotion(planRow),
+    ]);
+  }
+
+  logErr('insert event_log', await db.database.from('event_log').insert([{
+    round: 0,
+    source: 'system',
+    kind: 'system',
+    narration: approved
+      ? `Voice approved ${persona}'s plan. Firing ${actionCount} action(s).`
+      : `Voice rejected ${persona}'s plan.`,
+  }]));
+
+  return { persona, actionCount };
+}
+
 export default async function handler(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
@@ -299,8 +385,12 @@ export default async function handler(req: Request): Promise<Response> {
       to?: string;
       direction?: 'inbound' | 'outbound';
       message?: string;
-      transcript?: string;
+      // agent.message (voice) sends a single string; agent.call_ended sends
+      // an array of { role, content } turns covering the whole call.
+      transcript?: string | Array<{ role: string; content: string }>;
       conversationId?: string;
+      callId?: string;
+      disconnectionReason?: string;
     };
   };
   try {
@@ -311,7 +401,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   console.log('[agentphone-webhook] payload', JSON.stringify(payload));
 
-  if (payload.event !== 'agent.message') {
+  if (payload.event !== 'agent.message' && payload.event !== 'agent.call_ended') {
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
   }
 
@@ -412,12 +502,13 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
   }
 
-  // ── Voice: handle approval/rejection from the outbound call ──────────────
-  // Mirrors execute-action's full fan-out so saying "approve" on the phone has
-  // identical effects to clicking Approve in the dashboard: DB writes + Notion
-  // append + Slack/Calendar fan-out + Supermemory approval doc.
-  if (payload.channel === 'voice') {
-    const transcript = payload.data.transcript ?? '';
+  // ── Voice (webhook voiceMode): per-utterance agent.message ───────────────
+  // Unreachable while the agent is in `hosted` mode — kept as a fallback for
+  // when voiceMode flips to `webhook`. The webhook must return { text, hangup? }
+  // so the agent has something to speak back.
+  if (payload.event === 'agent.message' && payload.channel === 'voice') {
+    const raw = payload.data.transcript;
+    const transcript = typeof raw === 'string' ? raw : '';
     const decision = parseDecision(transcript);
 
     if (!decision) {
@@ -426,86 +517,44 @@ export default async function handler(req: Request): Promise<Response> {
       });
     }
 
-    const stateRes = await db.database
-      .from('current_state')
-      .select('alive_plan_ids,session_token')
-      .eq('id', 1)
-      .single();
-    const planId: string | undefined = (stateRes.data?.alive_plan_ids ?? [])[0];
-
-    if (!planId) {
+    const result = await executeVoiceDecision(db, logErr, decision);
+    if (!result) {
       return Response.json({ text: 'No active recommendation found. Please try again from the dashboard.', hangup: true });
     }
 
-    const planRes = await db.database
-      .from('plans')
-      .select('agent_id,content,logic_plan,actions,confidence')
-      .eq('id', planId)
-      .single();
-    const planRow = planRes.data as PlanRow | null;
-    const agentId = planRow?.agent_id ?? '';
-    const persona = PERSONA_NAME[agentId] ?? 'Your advisor';
-    const approved = decision === 'approved';
-
-    const apprRes = await db.database
-      .from('approvals')
-      .insert([{ plan_id: planId, decision }])
-      .select('id')
-      .single();
-    logErr('insert approvals', apprRes);
-    const approvalId = apprRes.data?.id as string | undefined;
-
-    logErr('update current_state', await db.database.from('current_state').update({
-      status: decision,
-      updated_at: new Date().toISOString(),
-    }).eq('id', 1));
-
-    const token = stateRes.data?.session_token as string | undefined;
-    const sm = getClient();
-    const tg = token && sm ? tags(token) : null;
-    if (sm && tg && approvalId) {
-      await safeCall(`documents.approval.${approvalId}`, undefined, async () => {
-        await sm.documents.add({
-          containerTag: tg.approvals,
-          content: JSON.stringify({ plan_id: planId, decision }),
-          customId: approvalId,
-          metadata: {
-            decision,
-            plan_id: planId,
-          },
-        });
-        return undefined;
-      });
-    }
-
-    let actionCount = 0;
-    if (approved && planRow) {
-      const actions = planRow.actions ?? [];
-      actionCount = actions.length;
-      await Promise.all([
-        ...actions.map((a) => {
-          if (a.type === 'slack_message') return fireSlack(a);
-          if (a.type === 'calendar_create') return fireCalendar(a);
-          return Promise.resolve();
-        }),
-        appendApprovedToNotion(planRow),
-      ]);
-    }
-
-    logErr('insert event_log', await db.database.from('event_log').insert([{
-      round: 0,
-      source: 'system',
-      kind: 'system',
-      narration: approved
-        ? `Voice approved ${persona}'s plan. Firing ${actionCount} action(s).`
-        : `Voice rejected ${persona}'s plan.`,
-    }]));
-
-    const reply = approved
-      ? `Decision locked in. ${persona}'s recommendation is now recorded. Your board thanks you. Goodbye.`
-      : `Understood. ${persona}'s recommendation has been rejected. Your board is standing by. Goodbye.`;
-
+    const reply = decision === 'approved'
+      ? `Decision locked in. ${result.persona}'s recommendation is now recorded. Your board thanks you. Goodbye.`
+      : `Understood. ${result.persona}'s recommendation has been rejected. Your board is standing by. Goodbye.`;
     return Response.json({ text: reply, hangup: true });
+  }
+
+  // ── Voice (hosted voiceMode): final transcript on call_ended ─────────────
+  // The hosted LLM handles the conversation in-call. After hangup AgentPhone
+  // POSTs the full transcript as an array of { role, content } turns. Filter
+  // to the user's turns only — the agent's turns include its own "approved"
+  // acknowledgement, which would false-positive parseDecision.
+  if (payload.event === 'agent.call_ended' && payload.channel === 'voice') {
+    const raw = payload.data.transcript;
+    const turns = Array.isArray(raw) ? raw : [];
+    const userText = turns
+      .filter((t) => t.role === 'user')
+      .map((t) => t.content)
+      .join(' ');
+    console.log('[agentphone-webhook] call_ended user text', userText);
+
+    const decision = parseDecision(userText);
+    if (!decision) {
+      return new Response(
+        JSON.stringify({ ok: true, reason: 'no decision in transcript' }),
+        { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const result = await executeVoiceDecision(db, logErr, decision);
+    return new Response(
+      JSON.stringify({ ok: true, decision, executed: !!result }),
+      { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } },
+    );
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });

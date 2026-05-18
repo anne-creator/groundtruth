@@ -35,10 +35,10 @@ function findMatches(s: string): Match[] {
 }
 
 const TOKEN_STYLE: Record<Match['kind'], CSSProperties> = {
-  money: { color: '#2A2118', fontWeight: 600 },
-  percent: { color: '#D9962B', fontWeight: 600 },
-  date: { color: '#2A2118', fontWeight: 600 },
-  term: { color: '#2A2118', fontWeight: 600 },
+  money: { color: 'var(--gt-text-primary)', fontWeight: 600 },
+  percent: { color: 'var(--gt-warning)', fontWeight: 600 },
+  date: { color: 'var(--gt-text-primary)', fontWeight: 600 },
+  term: { color: 'var(--gt-text-primary)', fontWeight: 600 },
 };
 
 function renderLine(line: string, keyPrefix: string) {

@@ -13,7 +13,7 @@ export default function EvidenceChips({ items, max = 6 }: Props) {
       <span
         style={{
           fontSize: 11,
-          color: '#9A8772',
+          color: 'var(--gt-text-muted)',
           fontWeight: 600,
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
@@ -29,9 +29,9 @@ export default function EvidenceChips({ items, max = 6 }: Props) {
             fontSize: 12,
             padding: '2px 8px',
             borderRadius: 6,
-            background: '#FFF7E8',
-            border: '1px solid #E7D8C4',
-            color: '#6F5D4C',
+            background: 'rgba(255, 255, 255, 0.34)',
+            border: '1px solid var(--gt-border)',
+            color: 'var(--gt-text-secondary)',
             fontVariantNumeric: 'tabular-nums',
             whiteSpace: 'nowrap',
           }}
@@ -40,7 +40,7 @@ export default function EvidenceChips({ items, max = 6 }: Props) {
         </span>
       ))}
       {extra > 0 && (
-        <span style={{ fontSize: 11, color: '#9A8772' }}>+{extra}</span>
+        <span style={{ fontSize: 11, color: 'var(--gt-text-muted)' }}>+{extra}</span>
       )}
     </div>
   );

@@ -2,15 +2,46 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root {
+  --gt-bg: #E3E7EC;
+  --gt-bg-deep: #D8DEE7;
+  --gt-panel: rgba(255, 255, 255, 0.48);
+  --gt-panel-strong: rgba(255, 255, 255, 0.66);
+  --gt-card: rgba(255, 255, 255, 0.56);
+  --gt-card-strong: rgba(255, 255, 255, 0.74);
+  --gt-muted-surface: rgba(255, 255, 255, 0.28);
+  --gt-border: rgba(255, 255, 255, 0.62);
+  --gt-border-strong: rgba(255, 255, 255, 0.82);
+  --gt-border-subtle: rgba(148, 163, 184, 0.24);
+  --gt-text-primary: #111827;
+  --gt-text-secondary: #475569;
+  --gt-text-muted: #64748B;
+  --gt-approve: #4F8F72;
+  --gt-reject: #B85E57;
+  --gt-warning: #AF8550;
+  --gt-info: #5B7DB7;
+  --gt-live: #5C9578;
+  --gt-neutral-accent: #8D8D98;
+  --gt-glass-shadow: 0 18px 42px rgba(15, 23, 42, 0.08), 0 2px 10px rgba(15, 23, 42, 0.05);
+  --gt-soft-shadow: 0 10px 24px rgba(15, 23, 42, 0.06), 0 1px 4px rgba(15, 23, 42, 0.04);
+  --gt-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
 html, body {
   margin: 0;
-  background: #FBF7EF;
-  color: #2A2118;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, var(--gt-bg), var(--gt-bg-deep));
+  color: var(--gt-text-primary);
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
 }
 
 button {

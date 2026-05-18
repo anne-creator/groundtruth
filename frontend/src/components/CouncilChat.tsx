@@ -26,9 +26,9 @@ function RoundHeader({ n, label }: { n: number; label?: string }) {
           width: 22,
           height: 22,
           borderRadius: '50%',
-          background: '#FFF7E8',
-          border: '1px solid #E7D8C4',
-          color: '#6F5D4C',
+          background: 'rgba(255, 255, 255, 0.36)',
+          border: '1px solid var(--gt-border)',
+          color: 'var(--gt-text-secondary)',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -42,7 +42,7 @@ function RoundHeader({ n, label }: { n: number; label?: string }) {
         style={{
           fontSize: 12,
           fontWeight: 600,
-          color: '#9A8772',
+          color: 'var(--gt-text-muted)',
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
         }}
@@ -50,7 +50,7 @@ function RoundHeader({ n, label }: { n: number; label?: string }) {
         Round {n}
         {label ? ` — ${label}` : ''}
       </span>
-      <div style={{ flex: 1, height: 1, background: '#EFE3D2' }} />
+      <div style={{ flex: 1, height: 1, background: 'var(--gt-border-subtle)' }} />
     </div>
   );
 }
@@ -74,18 +74,19 @@ export default function CouncilChat({ plans, decisions, events }: Props) {
         style={{
           margin: '40px auto',
           maxWidth: 480,
-          background: '#FFF7E8',
-          border: '1px dashed #E7D8C4',
+          background: 'rgba(255, 255, 255, 0.34)',
+          border: '1px dashed var(--gt-border)',
           borderRadius: 12,
           padding: '20px 24px',
           textAlign: 'center',
-          color: '#6F5D4C',
+          color: 'var(--gt-text-secondary)',
+          boxShadow: 'var(--gt-inset-highlight)',
         }}
       >
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55 }}>
           Ask a decision question to start the council.
         </p>
-        <p style={{ margin: '4px 0 0', fontSize: 12, color: '#9A8772' }}>
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--gt-text-muted)' }}>
           The advisors will debate, compare tradeoffs, and generate action-ready options.
         </p>
       </div>

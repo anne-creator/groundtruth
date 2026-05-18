@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { insforge, callFn, ensureRealtime } from './lib/insforge';
 import type { Plan, Decision, EventLogEntry, SessionState } from './types';
 import { AGENTS } from './types';
@@ -290,7 +290,7 @@ export default function App() {
     running || callState !== 'idle' || smsState !== 'idle';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#FBF7EF', color: '#2A2118' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'transparent', color: 'var(--gt-text-primary)' }}>
       <TopBar
         state={sessionState}
         rtStatus={rtStatus}
@@ -308,17 +308,20 @@ export default function App() {
             gap: 10,
             flexWrap: 'wrap',
             padding: '6px 20px',
-            background: '#FFFDF8',
-            borderBottom: '1px solid #EFE3D2',
+            background: 'var(--gt-panel)',
+            borderBottom: '1px solid var(--gt-border-subtle)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: 'var(--gt-inset-highlight)',
             fontSize: 12,
           }}
         >
           {error && (
             <span
               style={{
-                background: '#FFF7E8',
-                border: '1px solid #C94B3F',
-                color: '#C94B3F',
+                background: 'rgba(255, 255, 255, 0.42)',
+                border: '1px solid rgba(184, 94, 87, 0.42)',
+                color: 'var(--gt-reject)',
                 padding: '4px 10px',
                 borderRadius: 6,
                 fontWeight: 500,
@@ -328,19 +331,19 @@ export default function App() {
             </span>
           )}
           {running && (
-            <span style={{ color: '#3B73D9' }}>⟳ running debate…</span>
+            <span style={{ color: 'var(--gt-info)' }}>⟳ running debate…</span>
           )}
           {callState === 'calling' && (
-            <span style={{ color: '#B78B55' }}>📞 calling {sessionState?.caller_phone}…</span>
+            <span style={{ color: 'var(--gt-warning)' }}>📞 calling {sessionState?.caller_phone}…</span>
           )}
           {callState === 'called' && (
-            <span style={{ color: '#3E8F5A' }}>✓ call placed</span>
+            <span style={{ color: 'var(--gt-approve)' }}>✓ call placed</span>
           )}
           {smsState === 'sending' && (
-            <span style={{ color: '#B78B55' }}>💬 texting {sessionState?.caller_phone}…</span>
+            <span style={{ color: 'var(--gt-warning)' }}>💬 texting {sessionState?.caller_phone}…</span>
           )}
           {smsState === 'sent' && (
-            <span style={{ color: '#3E8F5A' }}>✓ text sent</span>
+            <span style={{ color: 'var(--gt-approve)' }}>✓ text sent</span>
           )}
         </div>
       )}
@@ -356,7 +359,7 @@ export default function App() {
             display: 'flex',
             flexDirection: 'column',
             minWidth: 0,
-            background: '#FBF7EF',
+            background: 'transparent',
           }}
         >
           <div
@@ -371,7 +374,7 @@ export default function App() {
             }}
           >
             {sessionState?.query && (
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#2A2118' }}>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--gt-text-primary)' }}>
                 Topic: {sessionState.query}
               </h2>
             )}
@@ -382,14 +385,38 @@ export default function App() {
           {/* Sticky composer */}
           <div
             style={{
-              borderTop: '1px solid #E7D8C4',
+              borderTop: '1px solid var(--gt-border-subtle)',
               padding: '12px 20px',
               display: 'flex',
+              alignItems: 'center',
               gap: 10,
-              background: '#FFFDF8',
+              background: 'var(--gt-panel)',
               flexShrink: 0,
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              boxShadow: 'var(--gt-inset-highlight)',
             }}
           >
+            <div style={{ display: 'flex', gap: 4 }}>
+              <ComposerIconButton title="Attach file (coming soon)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                </svg>
+              </ComposerIconButton>
+              <ComposerIconButton title="Mention council (coming soon)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-4 8" />
+                </svg>
+              </ComposerIconButton>
+              <ComposerIconButton title="Add data (coming soon)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <ellipse cx="12" cy="5" rx="8" ry="3" />
+                  <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+                  <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
+                </svg>
+              </ComposerIconButton>
+            </div>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -398,30 +425,43 @@ export default function App() {
               disabled={running}
               style={{
                 flex: 1,
-                background: '#FFFFFF',
-                border: '1px solid #E7D8C4',
+                background: 'var(--gt-card-strong)',
+                border: '1px solid var(--gt-border)',
                 borderRadius: 10,
                 padding: '10px 14px',
-                color: '#2A2118',
+                color: 'var(--gt-text-primary)',
                 fontSize: 14,
                 outline: 'none',
+                boxShadow: 'var(--gt-inset-highlight)',
               }}
             />
             <button
               onClick={() => query.trim() && !running && ask(query.trim())}
               disabled={running || !query.trim()}
+              title={running ? 'Running…' : 'Send'}
+              aria-label="Send"
               style={{
-                padding: '10px 20px',
-                borderRadius: 10,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
                 border: 'none',
-                background: running || !query.trim() ? '#C9B89D' : '#B78B55',
+                background: running || !query.trim() ? 'rgba(141, 141, 152, 0.56)' : 'var(--gt-neutral-accent)',
                 color: '#FFFFFF',
-                fontWeight: 600,
-                fontSize: 14,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 cursor: running || !query.trim() ? 'not-allowed' : 'pointer',
+                flexShrink: 0,
               }}
             >
-              {running ? '…' : 'Send'}
+              {running ? (
+                <span style={{ fontSize: 16, lineHeight: 1 }}>…</span>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              )}
             </button>
           </div>
         </main>
@@ -439,5 +479,29 @@ export default function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ComposerIconButton({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <button
+      type="button"
+      disabled
+      title={title}
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        border: 'none',
+        background: 'transparent',
+        color: 'var(--gt-text-muted)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'not-allowed',
+      }}
+    >
+      {children}
+    </button>
   );
 }

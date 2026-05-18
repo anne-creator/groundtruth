@@ -41,13 +41,16 @@ export default function DecisionPanel({ state, plans, onApprove, onReject, loadi
       style={{
         width: 380,
         flexShrink: 0,
-        borderLeft: '1px solid #E7D8C4',
-        background: '#FFFDF8',
+        borderLeft: '1px solid var(--gt-border-subtle)',
+        background: 'var(--gt-panel)',
         padding: '14px 16px 20px',
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
         gap: 16,
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: 'var(--gt-inset-highlight)',
       }}
     >
       <CouncilSummaryCard state={state} plans={plans} />
@@ -62,7 +65,7 @@ export default function DecisionPanel({ state, plans, onApprove, onReject, loadi
               style={{
                 fontSize: 11,
                 fontWeight: 600,
-                color: '#9A8772',
+                color: 'var(--gt-text-muted)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
               }}
@@ -70,12 +73,12 @@ export default function DecisionPanel({ state, plans, onApprove, onReject, loadi
               Top Options
             </span>
             {alivePlans.length > 0 && (
-              <span style={{ fontSize: 11, color: '#9A8772' }}>{alivePlans.length} viable</span>
+              <span style={{ fontSize: 11, color: 'var(--gt-text-muted)' }}>{alivePlans.length} viable</span>
             )}
           </div>
 
           {alivePlans.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 13, color: '#9A8772' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--gt-text-muted)' }}>
               {status === 'idle'
                 ? 'Options will appear once the council debates.'
                 : 'Debate in progress…'}
@@ -101,8 +104,8 @@ export default function DecisionPanel({ state, plans, onApprove, onReject, loadi
       {isTerminal && terminalPlan && (
         <section
           style={{
-            background: status === 'approved' ? '#EAF5EE' : '#FBEEEC',
-            border: `1px solid ${status === 'approved' ? '#3E8F5A55' : '#C94B3F55'}`,
+            background: status === 'approved' ? 'rgba(79, 143, 114, 0.12)' : 'rgba(184, 94, 87, 0.12)',
+            border: `1px solid ${status === 'approved' ? 'rgba(79, 143, 114, 0.3)' : 'rgba(184, 94, 87, 0.3)'}`,
             borderRadius: 12,
             padding: 14,
             display: 'flex',
@@ -115,17 +118,17 @@ export default function DecisionPanel({ state, plans, onApprove, onReject, loadi
               alignSelf: 'flex-start',
               fontSize: 11,
               fontWeight: 700,
-              color: status === 'approved' ? '#3E8F5A' : '#C94B3F',
+              color: status === 'approved' ? 'var(--gt-approve)' : 'var(--gt-reject)',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
             }}
           >
             {status === 'approved' ? '✓ Approved' : '✕ Rejected'}
           </span>
-          <h4 style={{ margin: 0, fontSize: 14, fontWeight: 650, color: '#2A2118' }}>
+          <h4 style={{ margin: 0, fontSize: 14, fontWeight: 650, color: 'var(--gt-text-primary)' }}>
             {AGENT_LABELS[terminalPlan.agent_id]}'s plan
           </h4>
-          <p style={{ margin: 0, fontSize: 13, color: '#2A2118', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--gt-text-primary)', lineHeight: 1.5 }}>
             {terminalPlan.content.length > 200
               ? `${terminalPlan.content.slice(0, 200).trim()}…`
               : terminalPlan.content}

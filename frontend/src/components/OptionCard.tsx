@@ -32,9 +32,9 @@ function deriveRisk(plan: Plan): 'Low–Medium' | 'Medium' | 'Medium–High' {
 }
 
 function riskColor(risk: string): string {
-  if (risk.includes('High')) return '#C94B3F';
-  if (risk.includes('Low')) return '#3E8F5A';
-  return '#D9962B';
+  if (risk.includes('High')) return 'var(--gt-reject)';
+  if (risk.includes('Low')) return 'var(--gt-approve)';
+  return 'var(--gt-warning)';
 }
 
 function actionText(action: Plan['actions'][number]): string {
@@ -45,22 +45,25 @@ export default function OptionCard({ plan, label, canAct, loading, onApprove, on
   const color = AGENT_COLOR[plan.agent_id];
   const title = firstSentence(plan.content);
   const summaryText = summary(plan.content);
-  const runway = plan.logic_plan?.computed_runway?.actual_projected_months;
+  const runwayCalc = plan.logic_plan?.computed_runway;
+  const runway = runwayCalc?.actual_projected_months;
   const risk = deriveRisk(plan);
   const actions = (plan.actions ?? []).slice(0, 3);
 
   return (
     <article
       style={{
-        background: '#FFFFFF',
+        background: 'var(--gt-card)',
         border: `1px solid ${color}55`,
         borderRadius: 12,
         padding: 14,
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
-        boxShadow: '0 1px 2px rgba(42, 33, 24, 0.04)',
+        boxShadow: 'var(--gt-soft-shadow), var(--gt-inset-highlight)',
         position: 'relative',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
       }}
     >
       <div
@@ -81,17 +84,17 @@ export default function OptionCard({ plan, label, canAct, loading, onApprove, on
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 4 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h4 style={{ margin: 0, fontSize: 14, fontWeight: 650, color: '#2A2118', lineHeight: 1.35 }}>
+          <h4 style={{ margin: 0, fontSize: 14, fontWeight: 650, color: 'var(--gt-text-primary)', lineHeight: 1.35 }}>
             {title}
           </h4>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9A8772' }}>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--gt-text-muted)' }}>
             Preferred by {AGENT_LABELS[plan.agent_id]}
           </p>
         </div>
       </div>
 
       {summaryText && (
-        <p style={{ margin: 0, fontSize: 13, color: '#6F5D4C', lineHeight: 1.5 }}>{summaryText}</p>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--gt-text-secondary)', lineHeight: 1.5 }}>{summaryText}</p>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -105,14 +108,14 @@ export default function OptionCard({ plan, label, canAct, loading, onApprove, on
             style={{
               fontSize: 10,
               fontWeight: 600,
-              color: '#9A8772',
+              color: 'var(--gt-text-muted)',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
             }}
           >
             Key Actions
           </span>
-          <ul style={{ margin: 0, paddingLeft: 16, color: '#2A2118', fontSize: 12, lineHeight: 1.5 }}>
+          <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--gt-text-primary)', fontSize: 12, lineHeight: 1.5 }}>
             {actions.map((a, i) => (
               <li key={i}>{actionText(a)}</li>
             ))}
@@ -129,7 +132,7 @@ export default function OptionCard({ plan, label, canAct, loading, onApprove, on
             padding: '8px 0',
             borderRadius: 8,
             border: 'none',
-            background: canAct ? '#3E8F5A' : '#D5C7B0',
+            background: canAct ? 'var(--gt-approve)' : 'rgba(141, 141, 152, 0.46)',
             color: '#FFFFFF',
             fontWeight: 600,
             fontSize: 13,
@@ -145,9 +148,9 @@ export default function OptionCard({ plan, label, canAct, loading, onApprove, on
             flex: 1,
             padding: '8px 0',
             borderRadius: 8,
-            border: '1px solid #E7D8C4',
-            background: '#FFFDF8',
-            color: '#C9B89D',
+            border: '1px solid var(--gt-border)',
+            background: 'rgba(255, 255, 255, 0.28)',
+            color: 'rgba(100, 116, 139, 0.58)',
             fontWeight: 600,
             fontSize: 13,
             cursor: 'not-allowed',
@@ -162,9 +165,9 @@ export default function OptionCard({ plan, label, canAct, loading, onApprove, on
             flex: 1,
             padding: '8px 0',
             borderRadius: 8,
-            border: '1px solid #E7D8C4',
-            background: '#FFFFFF',
-            color: canAct ? '#C94B3F' : '#C9B89D',
+            border: '1px solid var(--gt-border)',
+            background: 'rgba(255, 255, 255, 0.42)',
+            color: canAct ? 'var(--gt-reject)' : 'rgba(100, 116, 139, 0.58)',
             fontWeight: 600,
             fontSize: 13,
             cursor: !canAct || loading ? 'not-allowed' : 'pointer',
@@ -181,8 +184,8 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: s
   return (
     <div
       style={{
-        background: '#FFF7E8',
-        border: '1px solid #EFE3D2',
+        background: 'rgba(255, 255, 255, 0.3)',
+        border: '1px solid var(--gt-border)',
         borderRadius: 8,
         padding: '6px 8px',
         display: 'flex',
@@ -193,7 +196,7 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: s
         style={{
           fontSize: 10,
           fontWeight: 600,
-          color: '#9A8772',
+          color: 'var(--gt-text-muted)',
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
         }}
@@ -204,7 +207,7 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: s
         style={{
           fontSize: 13,
           fontWeight: 600,
-          color: tone ?? '#2A2118',
+          color: tone ?? 'var(--gt-text-primary)',
           fontVariantNumeric: 'tabular-nums',
         }}
       >

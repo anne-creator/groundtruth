@@ -7,9 +7,9 @@ interface Props {
 }
 
 const KIND_TINT: Record<string, { dot: string; bg: string }> = {
-  consensus: { dot: '#3E8F5A', bg: '#EAF5EE' },
-  eliminated: { dot: '#C94B3F', bg: '#FBEEEC' },
-  system: { dot: '#B78B55', bg: '#FFF7E8' },
+  consensus: { dot: '#4F8F72', bg: 'rgba(79, 143, 114, 0.12)' },
+  eliminated: { dot: '#B85E57', bg: 'rgba(184, 94, 87, 0.12)' },
+  system: { dot: '#8D8D98', bg: 'rgba(255, 255, 255, 0.34)' },
 };
 
 export default function RoundResultCard({ round, entries }: Props) {
@@ -18,8 +18,8 @@ export default function RoundResultCard({ round, entries }: Props) {
   return (
     <div
       style={{
-        background: '#FFF7E8',
-        border: '1px dashed #E7D8C4',
+        background: 'rgba(255, 255, 255, 0.34)',
+        border: '1px dashed var(--gt-border)',
         borderRadius: 12,
         padding: '12px 16px',
         display: 'flex',
@@ -31,7 +31,7 @@ export default function RoundResultCard({ round, entries }: Props) {
         style={{
           fontSize: 11,
           fontWeight: 600,
-          color: '#9A8772',
+          color: 'var(--gt-text-muted)',
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
         }}
@@ -54,7 +54,7 @@ export default function RoundResultCard({ round, entries }: Props) {
             />
             <FormattedProse
               text={e.narration}
-              style={{ fontSize: 13, color: '#2A2118', lineHeight: 1.5 }}
+              style={{ fontSize: 13, color: 'var(--gt-text-primary)', lineHeight: 1.5 }}
             />
           </div>
         );

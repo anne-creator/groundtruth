@@ -61,8 +61,8 @@ export default function CouncilSummaryCard({ state, plans }: Props) {
   return (
     <section
       style={{
-        background: '#FFF7E8',
-        border: '1px solid #E7D8C4',
+        background: 'rgba(255, 255, 255, 0.34)',
+        border: '1px solid var(--gt-border)',
         borderRadius: 12,
         padding: '12px 14px',
         display: 'flex',
@@ -75,7 +75,7 @@ export default function CouncilSummaryCard({ state, plans }: Props) {
           style={{
             fontSize: 11,
             fontWeight: 600,
-            color: '#9A8772',
+            color: 'var(--gt-text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
           }}
@@ -86,9 +86,9 @@ export default function CouncilSummaryCard({ state, plans }: Props) {
           style={{
             fontSize: 10,
             fontWeight: 600,
-            color: '#B78B55',
-            border: '1px solid #E7D8C4',
-            background: '#FFFDF8',
+            color: 'var(--gt-neutral-accent)',
+            border: '1px solid var(--gt-border)',
+            background: 'rgba(255, 255, 255, 0.44)',
             padding: '1px 6px',
             borderRadius: 999,
             textTransform: 'uppercase',
@@ -98,8 +98,8 @@ export default function CouncilSummaryCard({ state, plans }: Props) {
           Pinned
         </span>
       </div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: '#2A2118' }}>{headline}</div>
-      <p style={{ margin: 0, fontSize: 13, color: '#6F5D4C', lineHeight: 1.5 }}>{body}</p>
+      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gt-text-primary)' }}>{headline}</div>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--gt-text-secondary)', lineHeight: 1.5 }}>{body}</p>
     </section>
   );
 }

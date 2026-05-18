@@ -28,14 +28,14 @@ export default function VoteTally({ state, plans }: Props) {
           style={{
             fontSize: 11,
             fontWeight: 600,
-            color: '#9A8772',
+            color: 'var(--gt-text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
           }}
         >
           Vote Tally
         </span>
-        <span style={{ fontSize: 11, color: '#9A8772' }}>Through Round {totalRounds}</span>
+        <span style={{ fontSize: 11, color: 'var(--gt-text-muted)' }}>Through Round {totalRounds}</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -57,14 +57,14 @@ export default function VoteTally({ state, plans }: Props) {
                 style={{ width: 10, height: 10, borderRadius: '50%', background: color, justifySelf: 'center' }}
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-                <span style={{ fontSize: 12, color: '#2A2118', fontWeight: 500 }}>
+                <span style={{ fontSize: 12, color: 'var(--gt-text-primary)', fontWeight: 500 }}>
                   {AGENT_LABELS[agentId]}
                 </span>
                 <div
                   style={{
                     height: 6,
                     borderRadius: 3,
-                    background: '#F6EFE3',
+                    background: 'rgba(148, 163, 184, 0.2)',
                     overflow: 'hidden',
                   }}
                 >
@@ -82,7 +82,7 @@ export default function VoteTally({ state, plans }: Props) {
                 style={{
                   fontSize: 13,
                   fontWeight: 600,
-                  color: '#2A2118',
+                  color: 'var(--gt-text-primary)',
                   fontVariantNumeric: 'tabular-nums',
                   textAlign: 'right',
                 }}
@@ -95,7 +95,7 @@ export default function VoteTally({ state, plans }: Props) {
       </div>
 
       {state.status === 'complete' && (
-        <p style={{ margin: 0, fontSize: 12, color: '#6F5D4C', fontStyle: 'italic' }}>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--gt-text-secondary)', fontStyle: 'italic' }}>
           You decide.
         </p>
       )}

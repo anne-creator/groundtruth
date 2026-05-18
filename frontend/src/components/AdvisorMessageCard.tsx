@@ -4,9 +4,9 @@ import FormattedProse from './FormattedProse';
 import EvidenceChips from './EvidenceChips';
 
 export const AGENT_COLOR: Record<AgentId, string> = {
-  aggressive_ceo: '#D85A4A', // Elon
-  conservative_ceo: '#3B73D9', // Warren
-  balanced_ceo: '#5F9E6E', // Ray
+  aggressive_ceo: '#C8756B', // Elon
+  conservative_ceo: '#6A84B8', // Warren
+  balanced_ceo: '#6F997D', // Ray
 };
 
 type AdvisorTurn =
@@ -24,6 +24,17 @@ function firstSentence(s: string, max = 90): string {
   const m = trimmed.match(/^[^.!?\n]{6,}[.!?]/);
   const sent = m ? m[0] : trimmed.split('\n')[0];
   return sent.length > max ? `${sent.slice(0, max).trim()}…` : sent;
+}
+
+// Position pill needs to stay short enough to sit next to the name on one
+// line. The first sentence of a plan is often a full thought ("The math is
+// unambiguous: ..."), so we trim down to ~42 chars and cut at a word boundary.
+function positionPillText(s: string, max = 42): string {
+  const sent = firstSentence(s, 80).replace(/[.!?]+$/, '');
+  if (sent.length <= max) return sent;
+  const sliced = sent.slice(0, max);
+  const lastSpace = sliced.lastIndexOf(' ');
+  return `${(lastSpace > 12 ? sliced.slice(0, lastSpace) : sliced).trim()}…`;
 }
 
 function buildEvidenceChips(plan: Plan): string[] {
@@ -52,7 +63,7 @@ export default function AdvisorMessageCard({ turn, eliminatedAtRound, replyHint 
 
   const body = isPlan ? turn.plan.content : turn.decision.reasoning;
   const positionPill = isPlan
-    ? firstSentence(turn.plan.content)
+    ? positionPillText(turn.plan.content)
     : `Voted for ${turn.chosenLabel}`;
 
   const evidenceChips = isPlan ? buildEvidenceChips(turn.plan) : [];
@@ -60,21 +71,23 @@ export default function AdvisorMessageCard({ turn, eliminatedAtRound, replyHint 
   return (
     <article
       style={{
-        background: '#FFFFFF',
-        border: '1px solid #EFE3D2',
-        borderRadius: 12,
-        padding: 16,
+        background: 'var(--gt-card)',
+        border: '1px solid var(--gt-border)',
+        borderRadius: 14,
+        padding: 18,
         display: 'flex',
-        gap: 12,
+        gap: 14,
         opacity: isEliminated ? 0.65 : 1,
-        boxShadow: '0 1px 2px rgba(42, 33, 24, 0.04)',
+        boxShadow: 'var(--gt-soft-shadow), var(--gt-inset-highlight)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
       }}
     >
       {/* Avatar */}
       <div
         style={{
-          width: 36,
-          height: 36,
+          width: 44,
+          height: 44,
           borderRadius: '50%',
           background: `${color}1A`,
           border: `2px solid ${color}`,
@@ -84,32 +97,37 @@ export default function AdvisorMessageCard({ turn, eliminatedAtRound, replyHint 
           justifyContent: 'center',
           color,
           fontWeight: 700,
-          fontSize: 13,
+          fontSize: 14,
+          letterSpacing: '0.02em',
         }}
       >
         {AGENT_LABELS[agentId].split(' ').map((w) => w[0]).join('').slice(0, 2)}
       </div>
 
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 650, fontSize: 14, color: '#2A2118' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 650, fontSize: 14.5, color: 'var(--gt-text-primary)' }}>
             {AGENT_LABELS[agentId]}
           </span>
           <span
             style={{
-              fontSize: 11,
-              padding: '2px 8px',
+              fontSize: 11.5,
+              padding: '3px 10px',
               borderRadius: 999,
-              background: `${color}1A`,
-              border: `1px solid ${color}55`,
+              background: `${color}14`,
+              border: `1px solid ${color}40`,
               color,
               fontWeight: 600,
+              maxWidth: 280,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
             {positionPill}
           </span>
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9A8772', fontWeight: 600 }}>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--gt-text-muted)', fontWeight: 600, letterSpacing: '0.02em' }}>
             Round {round}
           </span>
         </div>
@@ -119,7 +137,7 @@ export default function AdvisorMessageCard({ turn, eliminatedAtRound, replyHint 
           text={body}
           style={{
             fontSize: 14,
-            color: '#2A2118',
+            color: 'var(--gt-text-primary)',
             lineHeight: 1.55,
           }}
         />
@@ -132,8 +150,8 @@ export default function AdvisorMessageCard({ turn, eliminatedAtRound, replyHint 
           <div
             style={{
               fontSize: 12,
-              color: '#9A8772',
-              borderTop: '1px solid #EFE3D2',
+              color: 'var(--gt-text-muted)',
+              borderTop: '1px solid var(--gt-border-subtle)',
               paddingTop: 8,
               marginTop: 2,
             }}
@@ -143,7 +161,7 @@ export default function AdvisorMessageCard({ turn, eliminatedAtRound, replyHint 
         )}
 
         {isEliminated && (
-          <div style={{ fontSize: 11, color: '#C94B3F', fontWeight: 600 }}>
+          <div style={{ fontSize: 11, color: 'var(--gt-reject)', fontWeight: 600 }}>
             Eliminated after Round {eliminatedAtRound}
           </div>
         )}

@@ -38,7 +38,7 @@ export default function TopBar({ state, rtStatus, running, activeTab, onTabChang
   const totalRounds = 3;
 
   const liveColor =
-    rtStatus === 'connected' ? '#4E9F65' : rtStatus === 'error' ? '#C94B3F' : '#9A8772';
+    rtStatus === 'connected' ? 'var(--gt-live)' : rtStatus === 'error' ? 'var(--gt-reject)' : 'var(--gt-text-muted)';
   const liveLabel =
     rtStatus === 'connected' ? 'Live' : rtStatus === 'error' ? 'Offline' : 'Connecting';
 
@@ -49,16 +49,19 @@ export default function TopBar({ state, rtStatus, running, activeTab, onTabChang
         alignItems: 'center',
         gap: 16,
         padding: '10px 20px',
-        borderBottom: '1px solid #E7D8C4',
-        background: '#FFFDF8',
+        borderBottom: '1px solid var(--gt-border-subtle)',
+        background: 'var(--gt-panel)',
         flexShrink: 0,
         minHeight: 56,
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: 'var(--gt-inset-highlight)',
       }}
     >
       {/* Left: logo + name + live pill */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <img src="/groundtruth-logo-icon.svg" alt="" width={30} height={30} />
-        <span style={{ fontWeight: 700, fontSize: 17, color: '#2A2118', letterSpacing: '-0.01em' }}>
+        <span style={{ fontWeight: 700, fontSize: 17, color: 'var(--gt-text-primary)', letterSpacing: '-0.01em' }}>
           GroundTruth
         </span>
         <span
@@ -71,8 +74,8 @@ export default function TopBar({ state, rtStatus, running, activeTab, onTabChang
             fontWeight: 600,
             padding: '3px 8px',
             borderRadius: 999,
-            background: '#FFF7E8',
-            border: `1px solid ${liveColor}55`,
+            background: 'rgba(255, 255, 255, 0.36)',
+            border: '1px solid var(--gt-border)',
             color: liveColor,
             marginLeft: 4,
           }}
@@ -96,9 +99,11 @@ export default function TopBar({ state, rtStatus, running, activeTab, onTabChang
           display: 'flex',
           gap: 2,
           margin: '0 auto',
-          background: '#F6EFE3',
+          background: 'rgba(255, 255, 255, 0.28)',
           padding: 3,
           borderRadius: 8,
+          border: '1px solid var(--gt-border)',
+          boxShadow: 'var(--gt-inset-highlight)',
         }}
       >
         {TABS.map((t) => {
@@ -114,12 +119,12 @@ export default function TopBar({ state, rtStatus, running, activeTab, onTabChang
                 padding: '6px 14px',
                 borderRadius: 6,
                 border: 'none',
-                background: active ? '#FFFFFF' : 'transparent',
-                color: active ? '#2A2118' : t.enabled ? '#6F5D4C' : '#C9B89D',
+                background: active ? 'var(--gt-card-strong)' : 'transparent',
+                color: active ? 'var(--gt-text-primary)' : t.enabled ? 'var(--gt-text-secondary)' : 'rgba(100, 116, 139, 0.52)',
                 fontWeight: active ? 600 : 500,
                 fontSize: 13,
                 cursor: t.enabled ? 'pointer' : 'not-allowed',
-                boxShadow: active ? '0 1px 2px rgba(42, 33, 24, 0.08)' : 'none',
+                boxShadow: active ? 'var(--gt-soft-shadow)' : 'none',
                 transition: 'background 0.15s, color 0.15s',
               }}
             >
@@ -132,7 +137,7 @@ export default function TopBar({ state, rtStatus, running, activeTab, onTabChang
       {/* Right: round progress + reset */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 500, color: '#6F5D4C' }}>
+          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--gt-text-secondary)' }}>
             Round {Math.max(1, roundIdx)} of {totalRounds}
           </span>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -147,7 +152,7 @@ export default function TopBar({ state, rtStatus, running, activeTab, onTabChang
                     width: 7,
                     height: 7,
                     borderRadius: '50%',
-                    background: filled ? '#B78B55' : '#EFE3D2',
+                    background: filled ? 'var(--gt-neutral-accent)' : 'rgba(148, 163, 184, 0.28)',
                     animation: isCurrent ? 'gt-pulse 1.4s infinite' : 'none',
                   }}
                 />
@@ -164,15 +169,39 @@ export default function TopBar({ state, rtStatus, running, activeTab, onTabChang
           style={{
             padding: '6px 14px',
             borderRadius: 8,
-            border: '1px solid #E7D8C4',
-            background: running ? '#F6EFE3' : '#FFFFFF',
-            color: '#6F5D4C',
+            border: '1px solid var(--gt-border)',
+            background: running ? 'var(--gt-muted-surface)' : 'var(--gt-card)',
+            color: 'var(--gt-text-secondary)',
             fontSize: 12,
             fontWeight: 600,
             cursor: running ? 'not-allowed' : 'pointer',
           }}
         >
           Reset
+        </button>
+
+        <button
+          type="button"
+          disabled
+          title="Settings (coming soon)"
+          aria-label="Settings"
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            border: '1px solid var(--gt-border)',
+            background: 'var(--gt-card)',
+            color: 'var(--gt-text-secondary)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'not-allowed',
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 010-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V2a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H22a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+          </svg>
         </button>
       </div>
 

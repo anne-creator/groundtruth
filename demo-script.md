@@ -28,16 +28,19 @@ If approved, GroundTruth can trigger the next actions automatically, once we app
 
 For the deep dive, there are two sponsor technologies that make this experience possible.
 
-First is Supermemory. The company information is ingested through Supermemory connectors, so GroundTruth can pull in real source material instead of relying on a one-time prompt. When a founder asks a question, each CEO agent retrieves relevant evidence from that memory layer, along with its own persistent profile and prior context. That is why the agents are not just producing three generic opinions. They are debating from the same company facts, with different decision styles, and we can show the evidence behind each recommendation.
+First is Supermemory. The company information is ingested through Supermemory connectors from all resource locations: slack, gamil and notion. so GroundTruth  a one-time prompt. When a founder asks a question never rely on one time prompt.   
+  
+Each CEO agent retrieves relevant evidence from that memory layer, along with its own persistent profile stored in postsql database. That is why the agents are not just producing three generic opinions.   
 
-Supermemory also lets us keep the system adaptive. New evidence can be uploaded into the session, past plans and decisions can be stored back into memory, and the agents can build on what happened before instead of starting from zero every time.
 
-The second key piece is AgentPhone. We did not want GroundTruth to live only inside a dashboard, because founders often make urgent decisions from their phones. With AgentPhone, a founder can text in a problem, which triggers the workflow through a webhook. After the board reaches a recommendation, GroundTruth can send the result back by SMS or place a voice call with the winning plan.
+Supermemory also lets us keep the system adaptive. New data is auto synced via supermemories , past plans and decisions can be stored back into memory, and the agents can build on what happened before instead of starting from zero every time.
 
-Most importantly, the human approval loop also happens through AgentPhone. The founder can reply "approve" or "reject" by text, or say it on the phone, and that webhook feeds the decision directly back into the system. So AgentPhone turns GroundTruth from a passive analysis tool into an active decision assistant that can reach the founder, ask for consent, and continue the workflow outside the app.
+The second key piece is AgentPhone. GroundTruth lives also in founder's pocket. With AgentPhone, a founder can text in a problem, which triggers the workflow through a webhook, exactly like typing inside the dashboard. And founders doesn't need to wait, Once GroundTruth needs founder's to check, it send the plan back via message or call the founder 
 
-InsForge is the glue underneath both features: edge functions connect the Supermemory retrieval, AgentPhone webhooks, live session state, and final execution step into one coordinated flow.
+Most importantly, the human approval loop also happens through AgentPhone. The founder can instruct Groundtrugh by replying the emssage or answering the phone, and that webhook feeds the decision directly back into the system. So AgentPhone turns GroundTruth from a passive analysis tool into an active decision assistant. After getting the approval, GroundTruth continues its execution.  
+  
+InsForge is the glue underneath both features: It has a postsql database to store all the agents status, and globla state. the broadcasting functionality ensuer smooth communication and the edge functions connect the Supermemory retrieval, AgentPhone webhooks, live session state, and final execution step into one coordinated flow.
 
 ## 4. Next Steps
 
-Next, we want to expand GroundTruth from one decision room into a persistent operating system for founders: more data sources, more execution integrations, and long-term learning from every decision the company makes.
+Next, I want to expand GroundTruth from one decision room into a persistent operating system for founders: more data sources, more execution integrations, and long-term learning from every decision the company makes.
