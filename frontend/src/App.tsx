@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { insforge, callFn, ensureRealtime } from './lib/insforge';
-import type { Plan, Decision, EventLogEntry, SessionState, AgentId } from './types';
+import type { Plan, Decision, EventLogEntry, SessionState } from './types';
 import { AGENTS } from './types';
-import NarratorPanel from './components/NarratorPanel';
-import AgentCard from './components/AgentCard';
-import ResultPanel from './components/ResultPanel';
 import MemoryPanel from './components/MemoryPanel';
+import TopBar, { type ViewTab } from './components/TopBar';
+import DecisionContextPanel from './components/DecisionContextPanel';
+import CouncilChat from './components/CouncilChat';
+import DecisionPanel from './components/DecisionPanel';
 
 type RtStatus = 'connecting' | 'connected' | 'error';
 
@@ -28,6 +29,9 @@ export default function App() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [events, setEvents] = useState<EventLogEntry[]>([]);
   const [rtStatus, setRtStatus] = useState<RtStatus>('connecting');
+  const [activeTab, setActiveTab] = useState<ViewTab>('chat');
+
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // ── DB refresh (source-of-truth backstop) ────────────────────────────────
   // Realtime is best-effort. After each orchestrator phase we re-fetch from
@@ -195,6 +199,14 @@ export default function App() {
     }
   }
 
+  // Auto-scroll center column to bottom whenever new content arrives. Watching counts
+  // (not arrays) keeps the effect from firing on no-op re-renders.
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [plans.length, decisions.length, events.length, sessionState?.status]);
+
   // SMS trigger: when realtime delivers status=round1 and this tab didn't start it,
   // auto-orchestrate the debate so the dashboard shows the live session.
   useEffect(() => {
@@ -274,103 +286,149 @@ export default function App() {
     } finally { setActionLoading(false); }
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <NarratorPanel events={events} />
+  const showCallSmsRow =
+    running || callState !== 'idle' || smsState !== 'idle';
 
-        <main style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#f8fafc' }}>GroundTruth</h1>
-            {sessionState && sessionState.status !== 'idle' && (
-              <span style={{ fontSize: 12, color: '#94a3b8', background: '#1e293b', padding: '2px 10px', borderRadius: 20, border: '1px solid #334155' }}>
-                {sessionState.status}
-              </span>
-            )}
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#FBF7EF', color: '#2A2118' }}>
+      <TopBar
+        state={sessionState}
+        rtStatus={rtStatus}
+        running={running}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onReset={handleReset}
+      />
+
+      {(error || showCallSmsRow) && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+            padding: '6px 20px',
+            background: '#FFFDF8',
+            borderBottom: '1px solid #EFE3D2',
+            fontSize: 12,
+          }}
+        >
+          {error && (
             <span
-              title={`realtime: ${rtStatus}`}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 11,
-                color:
-                  rtStatus === 'connected' ? '#34d399' : rtStatus === 'error' ? '#f87171' : '#94a3b8',
-              }}
-            >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background:
-                    rtStatus === 'connected' ? '#34d399' : rtStatus === 'error' ? '#f87171' : '#94a3b8',
-                }}
-              />
-              {rtStatus === 'connected' ? 'live' : rtStatus === 'error' ? 'realtime error' : 'connecting…'}
-            </span>
-            {running && <span style={{ fontSize: 12, color: '#60a5fa' }}>⟳ running…</span>}
-            {callState === 'calling' && (
-              <span style={{ fontSize: 12, color: '#a78bfa', background: '#1e1b4b', padding: '2px 10px', borderRadius: 20, border: '1px solid #4c1d95' }}>
-                📞 calling {sessionState?.caller_phone}…
-              </span>
-            )}
-            {callState === 'called' && (
-              <span style={{ fontSize: 12, color: '#34d399', background: '#052e16', padding: '2px 10px', borderRadius: 20, border: '1px solid #065f46' }}>
-                ✓ call placed
-              </span>
-            )}
-            {smsState === 'sending' && (
-              <span style={{ fontSize: 12, color: '#a78bfa', background: '#1e1b4b', padding: '2px 10px', borderRadius: 20, border: '1px solid #4c1d95' }}>
-                💬 texting {sessionState?.caller_phone}…
-              </span>
-            )}
-            {smsState === 'sent' && (
-              <span style={{ fontSize: 12, color: '#34d399', background: '#052e16', padding: '2px 10px', borderRadius: 20, border: '1px solid #065f46' }}>
-                ✓ text sent
-              </span>
-            )}
-            <button
-              onClick={handleReset}
-              disabled={running}
-              title="Wipe plans, decisions, events and set status to idle"
-              style={{
-                marginLeft: 'auto',
-                padding: '6px 14px',
+                background: '#FFF7E8',
+                border: '1px solid #C94B3F',
+                color: '#C94B3F',
+                padding: '4px 10px',
                 borderRadius: 6,
-                border: '1px solid #475569',
-                background: running ? '#1e293b' : '#334155',
-                color: '#f1f5f9',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: running ? 'not-allowed' : 'pointer',
+                fontWeight: 500,
               }}
             >
-              Reset
-            </button>
+              {error}
+            </span>
+          )}
+          {running && (
+            <span style={{ color: '#3B73D9' }}>⟳ running debate…</span>
+          )}
+          {callState === 'calling' && (
+            <span style={{ color: '#B78B55' }}>📞 calling {sessionState?.caller_phone}…</span>
+          )}
+          {callState === 'called' && (
+            <span style={{ color: '#3E8F5A' }}>✓ call placed</span>
+          )}
+          {smsState === 'sending' && (
+            <span style={{ color: '#B78B55' }}>💬 texting {sessionState?.caller_phone}…</span>
+          )}
+          {smsState === 'sent' && (
+            <span style={{ color: '#3E8F5A' }}>✓ text sent</span>
+          )}
+        </div>
+      )}
+
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        {/* Left column — Decision Context */}
+        <DecisionContextPanel state={sessionState} plans={plans} />
+
+        {/* Center column — Council Chat + sticky composer */}
+        <main
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: 0,
+            background: '#FBF7EF',
+          }}
+        >
+          <div
+            ref={chatScrollRef}
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '20px 24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
+          >
+            {sessionState?.query && (
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#2A2118' }}>
+                Topic: {sessionState.query}
+              </h2>
+            )}
+
+            <CouncilChat plans={plans} decisions={decisions} events={events} />
           </div>
 
-          {error && (
-            <div style={{ background: '#7f1d1d', border: '1px solid #ef4444', borderRadius: 8, padding: 12, fontSize: 13, color: '#fca5a5' }}>
-              {error}
-            </div>
-          )}
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {AGENTS.map((id) => (
-              <AgentCard
-                key={id}
-                agentId={id as AgentId}
-                plan={plans.find((p) => p.agent_id === id) ?? null}
-                decisions={decisions.filter((d) => d.agent_id === id)}
-                allPlans={plans}
-              />
-            ))}
+          {/* Sticky composer */}
+          <div
+            style={{
+              borderTop: '1px solid #E7D8C4',
+              padding: '12px 20px',
+              display: 'flex',
+              gap: 10,
+              background: '#FFFDF8',
+              flexShrink: 0,
+            }}
+          >
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && query.trim() && !running) ask(query.trim()); }}
+              placeholder="Ask a follow-up question or adjust the scenario…"
+              disabled={running}
+              style={{
+                flex: 1,
+                background: '#FFFFFF',
+                border: '1px solid #E7D8C4',
+                borderRadius: 10,
+                padding: '10px 14px',
+                color: '#2A2118',
+                fontSize: 14,
+                outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => query.trim() && !running && ask(query.trim())}
+              disabled={running || !query.trim()}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 10,
+                border: 'none',
+                background: running || !query.trim() ? '#C9B89D' : '#B78B55',
+                color: '#FFFFFF',
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: running || !query.trim() ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {running ? '…' : 'Send'}
+            </button>
           </div>
         </main>
 
+        {/* Right column — Decision Panel (placeholder: ResultPanel until Stage 5) + Memory drawer */}
         <div style={{ display: 'flex', flexDirection: 'row', flexShrink: 0, alignSelf: 'stretch', minHeight: 0 }}>
-          <ResultPanel
+          <DecisionPanel
             state={sessionState}
             plans={plans}
             onApprove={handleApprove}
@@ -379,24 +437,6 @@ export default function App() {
           />
           <MemoryPanel session={sessionState} />
         </div>
-      </div>
-
-      <div style={{ borderTop: '1px solid #334155', padding: '12px 20px', display: 'flex', gap: 12, background: '#0f172a' }}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && query.trim() && !running) ask(query.trim()); }}
-          placeholder="What should we do about runway?"
-          disabled={running}
-          style={{ flex: 1, background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '10px 14px', color: '#f1f5f9', fontSize: 14, outline: 'none' }}
-        />
-        <button
-          onClick={() => query.trim() && !running && ask(query.trim())}
-          disabled={running || !query.trim()}
-          style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: running ? '#1e3a5f' : '#2563eb', color: '#fff', fontWeight: 700, fontSize: 14, cursor: running ? 'not-allowed' : 'pointer' }}
-        >
-          {running ? '…' : 'Ask'}
-        </button>
       </div>
     </div>
   );
