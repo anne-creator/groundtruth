@@ -2,45 +2,40 @@
 
 ## 1. Opening
 
-Founders often delay high-stakes decisions until it's too late.
+Founders are not short on data. They are short on time, conviction when the next decision can change the company. So they postpone it.
 
-GroundTruth gives you a answer with reasoing chain, out of pocket. You text your problem. It takes your company info, has thre3 CEO agents craft plan independetnly, what's more, debate the options, voting and call you for your consent to execute.  
+GroundTruth is a on the go decision engine for those moments: it reads , discuss tradeoffs and executed for the founder, only under founders approval.
 
 ## 2. Product Walkthrough
 
-Let me show you what that looks like.
+Let me walk you through
 
-Here, a founder asks a real operating question: "What should we do about runway?"
+As a foudner, Cam is between client meetings  when one question keeps nagging at him: "Should I raise before the Demo Day?" The factors are tangled, so he texted Groundthruth on the phone
 
-GroundTruth immediately pulls in the company context and sends the same problem to three different CEO personas, backed by pholosiphies behind buffet, elon mask and Ray Dalio
+GroundTruth does not answer from a one-off prompt. It pulls in live company context: cash on hand, burn, threats, milestones, and prior company knowledge.
 
-Each agent proposes its own plan, with confidence, projected runway, and the evidence behind its reasoning. Then,  the agents debate.
+Then three CEO agents reason from different philosophies inspired by Warren Buffett, Elon Musk, and Ray Dalio. Each one produces a plan with its own logic, evidence, confidence, and projected runway.
 
-In the next rounds, they review each other's plans, vote, change their minds when the evidence is stronger, and eliminate weaker options.
+Then the debate begins. The agents challenge one another, vote across the plans, and weaker options drop away.
 
-On the left, we can watch the decision process unfold in real time. In the center, we see each agent's proposal and reasoning. On the right, GroundTruth narrows the debate down to the surviving recommendation.
+Here we can watch the process unfold in real time: the reasoning, the voting, and the surviving recommendation.
 
-The important part is that the human is still in control. Once the agents converge, the founder can approve or reject the final plan.
+The founder never loses control. Once the council converges, Cam can discuss the plan by message or phone, then approve or reject it.
 
-If approved, GroundTruth can trigger the next actions automatically, once we approve the plan, the decision immediately logged ot the notion
+If approved, GroundTruth moves from reasoning to execution and logs the decision into Notion immediately.
 
 ## 3. Deep Dive
 
-For the deep dive, there are two sponsor technologies that make this experience possible.
+What makes this possible is the sponsor stack working as one system.
 
-First is Supermemory. The company information is ingested through Supermemory connectors from all resource locations: slack, gamil and notion. so GroundTruth  a one-time prompt. When a founder asks a question never rely on one time prompt.   
-  
-Each CEO agent retrieves relevant evidence from that memory layer, along with its own persistent profile stored in postsql database. That is why the agents are not just producing three generic opinions.   
+Supermemory gives GroundTruth persistent company memory. It keeps company evidence synced, gives each agent the relevant context it needs, and lets past plans and decisions improve future reasoning over time.
 
+AgentPhone puts that decision engine in the founder's pocket. Cam can text in a problem, receive the recommendation by text or call, and send approval back without opening the dashboard.
 
-Supermemory also lets us keep the system adaptive. New data is auto synced via supermemories , past plans and decisions can be stored back into memory, and the agents can build on what happened before instead of starting from zero every time.
+InsForge is the orchestration layer underneath it all. It stores state, broadcasts the live debate, and runs the edge functions that connect Supermemory retrieval, AgentPhone webhooks, the debate workflow, and execution.
 
-The second key piece is AgentPhone. GroundTruth lives also in founder's pocket. With AgentPhone, a founder can text in a problem, which triggers the workflow through a webhook, exactly like typing inside the dashboard. And founders doesn't need to wait, Once GroundTruth needs founder's to check, it send the plan back via message or call the founder 
-
-Most importantly, the human approval loop also happens through AgentPhone. The founder can instruct Groundtrugh by replying the emssage or answering the phone, and that webhook feeds the decision directly back into the system. So AgentPhone turns GroundTruth from a passive analysis tool into an active decision assistant. After getting the approval, GroundTruth continues its execution.  
-  
-InsForge is the glue underneath both features: It has a postsql database to store all the agents status, and globla state. the broadcasting functionality ensuer smooth communication and the edge functions connect the Supermemory retrieval, AgentPhone webhooks, live session state, and final execution step into one coordinated flow.
+So GroundTruth is not just analysis, and it is not just automation. It is memory, deliberation, approval, and execution connected in one loop.
 
 ## 4. Next Steps
 
-Next, I want to expand GroundTruth from one decision room into a persistent operating system for founders: more data sources, more execution integrations, and long-term learning from every decision the company makes.
+Next, I want to grow GroundTruth into a persistent operating system that learns from every decision a company makes.
